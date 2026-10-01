@@ -267,6 +267,17 @@
     .textarea{min-height:5.5rem;resize:vertical;font-family:inherit;line-height:1.55}
     .modal-actions{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.1rem}
 
+    /* ---------- Multi-photo chips + currency ---------- */
+    .cur-wrap{display:flex;flex:none;align-items:center;gap:.45rem}
+    .cur-label{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#777}
+    .chip-strip{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.6rem}
+    .chip-strip:empty{display:none;margin:0}
+    .photo-chip{position:relative;width:5.5rem;height:4rem;border-radius:.6rem;overflow:hidden;border:1px solid #2e2e2e;background:#161616}
+    .photo-chip img{display:block;width:100%;height:100%;object-fit:cover}
+    .chip-x{position:absolute;top:.2rem;right:.2rem;width:1.3rem;height:1.3rem;border:0;border-radius:.45rem;background:rgba(0,0,0,.75);color:#fff;font-size:1rem;line-height:1;cursor:pointer}
+    .chip-x:hover{color:#f87171}
+    .img-badge{position:absolute;right:.35rem;bottom:.35rem;background:rgba(0,0,0,.75);color:#fff;font-size:.62rem;font-weight:700;padding:.16rem .4rem;border-radius:.4rem}
+
     /* ---------- Admin utilities (not used on the customer site) ---------- */
     .p-4{padding:1rem}
     .py-6{padding-top:1.5rem;padding-bottom:1.5rem}
@@ -316,6 +327,11 @@
           <h1 class="text-lg font-bold tracking-tight">Owner Dashboard <span class="font-medium text-[#777]">·</span> <span class="text-[#FF8C42]">Cheap Motors</span></h1>
           <span class="mt-0.5 hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[#777] sm:block">Manage your inventory</span>
         </span>
+      </div>
+
+      <div class="cur-wrap">
+        <label class="cur-label" for="currencySel">Currency</label>
+        <select id="currencySel" class="inp" style="width:auto;padding:.45rem .7rem;font-size:.8rem" aria-label="Display currency for prices"></select>
       </div>
 
       <a href="index.html" class="btn-ghost ml-auto shrink-0">
@@ -392,22 +408,14 @@
         </div>
 
         <div class="upload-row">
-          <label class="file-btn" title="Pick a photo from your computer">
+          <label class="file-btn" title="Pick up to 6 photos of this car">
             <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <span>Upload Photo</span>
-            <input id="n_image_file" type="file" accept="image/*" style="display:none" aria-label="Upload a photo from your computer">
+            <span>Upload Photos</span>
+            <input id="n_image_file" type="file" accept="image/*" multiple style="display:none" aria-label="Upload up to 6 photos of this car">
           </label>
-          <span class="upload-hint">Optional — a photo from your computer. Used instead of the image link, compressed automatically.</span>
+          <span class="upload-hint">Optional — up to 6 photos of this car; the first one is the cover. Used instead of the image link.</span>
         </div>
-
-        <div id="uploadPreview" class="upload-preview" hidden>
-          <img id="uploadThumb" class="upload-thumb" alt="Chosen photo preview">
-          <div class="upload-meta">
-            <p id="uploadName" class="upload-name"></p>
-            <p class="upload-sub">This photo will be used — the image link is ignored while it is attached.</p>
-          </div>
-          <button type="button" id="uploadClear" class="upload-x" aria-label="Remove uploaded photo" title="Remove photo">&times;</button>
-        </div>
+        <div id="photoStrip" class="chip-strip" hidden></div>
 
         <button type="submit" class="btn-warn mt-4 w-full sm:w-auto">
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -455,7 +463,7 @@
             <input id="e_name" class="inp" type="text" autocomplete="off">
           </label>
           <label class="modal-field">
-            <span class="modal-label">Price (USD)</span>
+            <span class="modal-label" id="e_price_label">Price</span>
             <input id="e_price" class="inp" type="number" min="0">
           </label>
           <label class="modal-field">
@@ -469,22 +477,14 @@
         </div>
 
         <div class="upload-row">
-          <label class="file-btn" title="Replace the photo with a file from your computer">
+          <label class="file-btn" title="Add more photos of this car (up to 6 total)">
             <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            <span>Upload Photo</span>
-            <input id="e_image_file" type="file" accept="image/*" style="display:none" aria-label="Upload a replacement photo">
+            <span>Add Photos</span>
+            <input id="e_image_file" type="file" accept="image/*" multiple style="display:none" aria-label="Add more photos of this car">
           </label>
-          <span class="upload-hint">Optional — replaces the image link.</span>
+          <span class="upload-hint">Up to 6 photos — the first is the cover. The image link above is only used when there are no photos.</span>
         </div>
-
-        <div id="e_uploadPreview" class="upload-preview" hidden>
-          <img id="e_uploadThumb" class="upload-thumb" alt="Chosen photo preview">
-          <div class="upload-meta">
-            <p id="e_uploadName" class="upload-name"></p>
-            <p class="upload-sub">This new photo will replace the current one.</p>
-          </div>
-          <button type="button" id="e_uploadClear" class="upload-x" aria-label="Remove uploaded photo" title="Remove photo">&times;</button>
-        </div>
+        <div id="e_photoStrip" class="chip-strip"></div>
 
         <label class="modal-field span2" style="margin-top:.9rem">
           <span class="modal-label">Description</span>
@@ -574,7 +574,7 @@
           name: '2021 Toyota Camry SE',
           year: 2021,
           miles: 32450,
-          price: 18500,
+          price: 68500000,
           image: IMG.camry,
           description: 'One-owner Camry SE in excellent condition. Sport-tuned suspension, backup camera, Apple CarPlay, and Toyota Safety Sense. Serviced regularly and ready to drive home today.',
           status: 'available',
@@ -585,7 +585,7 @@
           name: '2022 Ford Mustang GT',
           year: 2022,
           miles: 18200,
-          price: 29500,
+          price: 109000000,
           image: IMG.mustang,
           description: 'Iconic 5.0L V8 Mustang GT with under 20k miles. Premium sound, leather interior, and that unmistakable GT roar. Garage kept and spotless inside and out.',
           status: 'available',
@@ -596,7 +596,7 @@
           name: '2022 Tesla Model 3',
           year: 2022,
           miles: 22100,
-          price: 36200,
+          price: 134000000,
           image: IMG.tesla,
           description: 'Long Range Model 3 with Autopilot, panoramic glass roof, and premium interior. Supercharging access included — zero gas, all torque.',
           status: 'available',
@@ -610,8 +610,57 @@
           return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
         });
       }
-      function fmtPrice(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
+      function fmtPrice(n) { return currentCurrency().symbol + Number(n || 0).toLocaleString('en-US'); }
       function fmtMiles(n) { return Number(n || 0).toLocaleString('en-US') + ' miles'; }
+
+      /* ---- Currency (chosen here in the header; both pages read it) ------- */
+      var CUR_KEY = 'cheapMotorsCurrency';
+      var CURRENCIES = [
+        { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX ' },
+        { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh ' },
+        { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh ' },
+        { code: 'RWF', name: 'Rwandan Franc', symbol: 'RF ' },
+        { code: 'USD', name: 'US Dollar', symbol: '$' },
+        { code: 'EUR', name: 'Euro', symbol: '€' },
+        { code: 'GBP', name: 'British Pound', symbol: '£' }
+      ];
+      function currentCurrency() {
+        var code = '';
+        try { code = storage.getItem(CUR_KEY) || ''; } catch (err) {}
+        for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].code === code) return CURRENCIES[i];
+        return CURRENCIES[0];                    // default: Ugandan Shilling
+      }
+
+      /* A car can carry several photos (up to 6). Older records have a
+         single "image" field — both shapes work through these helpers. */
+      function carImages(car) {
+        var arr = (car && Array.isArray(car.images)) ? car.images.filter(Boolean) : [];
+        if (arr.length) return arr;
+        if (car && car.image) return [car.image];
+        return [];
+      }
+      function coverImage(car) {
+        var a = carImages(car);
+        return a.length ? a[0] : DEFAULT_IMAGE;
+      }
+
+      /* One-time upgrade: the demo cars used to carry US-dollar prices
+         (18,500 / 29,500 / 36,200). If the stored data is still exactly that
+         untouched demo set, refresh it with the current shilling prices.
+         Anything the owner has edited is left completely alone. */
+      function looksLikeOldDemo(data) {
+        var ids = ['camry-2021', 'mustang-2022', 'tesla-2022'];
+        var names = ['2021 Toyota Camry SE', '2022 Ford Mustang GT', '2022 Tesla Model 3'];
+        var prices = [18500, 29500, 36200];
+        if (!Array.isArray(data) || data.length !== 3) return false;
+        for (var i = 0; i < 3; i++) {
+          if (!data[i] || String(data[i].id) !== ids[i]) return false;
+          if (String(data[i].name) !== names[i]) return false;
+          if (Number(data[i].price) !== prices[i]) return false;
+          if (isSold(data[i])) return false;
+        }
+        return true;
+      }
       function isSold(car) { return car.status === 'sold' || car.sold === true; }
 
       /* ---- The inventory ---------------------------------------------------
@@ -626,7 +675,12 @@
           }
           var data = JSON.parse(raw);
           if (!Array.isArray(data)) throw new Error('Unexpected data');
-          return data.filter(function (c) { return c && typeof c === 'object'; });
+          data = data.filter(function (c) { return c && typeof c === 'object'; });
+          if (looksLikeOldDemo(data)) {            // untouched USD demo -> refresh prices
+            data = DEFAULT_CARS.slice();
+            try { storage.setItem(STORE_KEY, JSON.stringify(data)); } catch (err) {}
+          }
+          return data;
         } catch (err) {
           return DEFAULT_CARS.slice();               // corrupt data → fall back to defaults
         }
@@ -687,7 +741,8 @@
         return `
         <article class="${rowCls}" data-car="${esc(car.id)}">
           <div class="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-[#161616]">
-            <img src="${esc(car.image || '')}" alt="${esc(car.name)}" class="h-20 w-28 rounded-xl object-cover">
+            <img src="${esc(coverImage(car))}" alt="${esc(car.name)}" class="h-20 w-28 rounded-xl object-cover">
+            ${carImages(car).length > 1 ? '<span class="img-badge" title="' + carImages(car).length + ' photos">' + carImages(car).length + '</span>' : ''}
             ${sold ? '<span class="absolute inset-0 flex items-center justify-center bg-black/60 text-[11px] font-extrabold uppercase tracking-widest text-[#f87171]">Sold</span>' : ''}
           </div>
 
@@ -783,7 +838,7 @@
       function editPrice(id) {
         var car = findCar(id);
         if (!car) return;
-        var entry = prompt('New price for ' + car.name + ' (USD):', car.price);
+        var entry = prompt('New price for ' + car.name + ' (' + currentCurrency().code + '):', car.price);
         if (entry === null || String(entry).trim() === '') return;   // cancelled
         var value = parseFloat(entry);
         if (isNaN(value) || value < 0) {
@@ -817,13 +872,17 @@
 
         var yearMatch = name.match(/\b(19|20)\d{2}\b/);    // "2015 Honda Civic" → 2015
 
+        var images = newImages.length
+          ? newImages.map(function (p) { return p.src; })
+          : [imageInput.value.trim() || DEFAULT_IMAGE];   // link -> fallback photo
+
         var car = {
           id: Date.now(),
           name: name,
           year: yearMatch ? parseInt(yearMatch[0], 10) : '',
           miles: miles,
           price: Math.round(price),
-          image: newImageBase64 || imageInput.value.trim() || DEFAULT_IMAGE, // upload > link > fallback photo
+          images: images,
           description: '',
           status: 'available',
           sold: false,
@@ -851,34 +910,31 @@
       });
 
       /* ---- Optional photo upload ------------------------------------------
-         "Upload Photo" reads a file from your computer with a FileReader and
-         keeps it as a data URL. Photos are shrunk to ≤900px (JPEG) first —
-         localStorage only holds ~5 MB, and phone photos are 2–5 MB each.
-         An uploaded photo overrides the "Image Link" field; the ✕ detaches. */
-      var newImageBase64 = null;
+         "Upload Photos" reads several image files at once (up to MAX_PHOTOS
+         per car), shrinks each to ≤900px JPEG — localStorage only holds
+         ~5 MB — and shows them as chips. The first photo becomes the car's
+         cover image. Uploads replace the "Image Link" field. */
+      var MAX_PHOTOS = 6;
+      var newImages = [];                                 // [{ src, name }]
 
       var uploadInp = document.getElementById('n_image_file');
-      var uploadPrev = document.getElementById('uploadPreview');
-      var uploadThumb = document.getElementById('uploadThumb');
-      var uploadNameEl = document.getElementById('uploadName');
 
-      function updateUploadPreview(fileName) {
-        if (!uploadPrev) return;
-        if (!newImageBase64) {
-          uploadPrev.hidden = true;
-          uploadThumb.removeAttribute('src');
-          uploadNameEl.textContent = '';
-          return;
-        }
-        uploadThumb.src = newImageBase64;
-        uploadNameEl.textContent = fileName || 'Selected photo';
-        uploadPrev.hidden = false;
+      function renderPhotoStrip() {
+        var strip = document.getElementById('photoStrip');
+        if (!strip) return;
+        strip.innerHTML = newImages.map(function (p, i) {
+          return '<div class="photo-chip" title="' + esc(p.name) + '">' +
+                   '<img src="' + esc(p.src) + '" alt="Photo ' + (i + 1) + '">' +
+                   '<button type="button" class="chip-x" data-chip="' + i + '" aria-label="Remove photo ' + (i + 1) + '">&times;</button>' +
+                 '</div>';
+        }).join('');
+        strip.hidden = newImages.length === 0;
       }
 
       function resetUpload() {
-        newImageBase64 = null;
+        newImages = [];
         if (uploadInp) uploadInp.value = '';
-        updateUploadPreview('');
+        renderPhotoStrip();
       }
 
       /* Shrinks a data-URL photo so it fits comfortably in localStorage.
@@ -909,51 +965,64 @@
       }
 
       function handleUploadChange(e) {
-        var file = e.target.files && e.target.files[0];    // files[0] — not the whole FileList
-        if (!file) { resetUpload(); return; }              // picker cancelled / cleared
-        if (!/^image\//.test(file.type)) {
-          toast('That file is not an image — please pick a JPG, PNG or WebP photo', 'error');
-          uploadInp.value = '';
+        var list = e.target.files;
+        if (!list || !list.length) return;                // picker cancelled
+        var room = MAX_PHOTOS - newImages.length;
+        if (room <= 0) {
+          toast('Already ' + MAX_PHOTOS + ' photos — remove one first', 'error');
+          e.target.value = '';
           return;
         }
-        if (file.size > 15 * 1024 * 1024) {
-          toast('That photo is too large (over 15 MB) — please pick a smaller one', 'error');
-          uploadInp.value = '';
-          return;
+        var files = [], skipped = 0;
+        for (var i = 0; i < list.length; i++) {
+          var f = list[i];
+          if (!/^image\//.test(f.type) || f.size > 15 * 1024 * 1024) { skipped++; continue; }
+          if (files.length < room) files.push(f); else skipped++;
         }
-        var fileName = file.name;
-        var reader = new FileReader();
-        reader.onload = function (ev) {
-          shrinkDataUrl(ev.target.result, function (out) {
-            if (!out) {
-              toast('Could not read that photo — try a JPG or PNG instead', 'error');
-              uploadInp.value = '';
-              return;
-            }
-            newImageBase64 = out;
-            updateUploadPreview(fileName);
-          });
-        };
-        reader.onerror = function () {
-          toast('Could not read that photo — try a JPG or PNG instead', 'error');
-          uploadInp.value = '';
-        };
-        reader.readAsDataURL(file);
+        if (skipped) toast(skipped + ' file' + (skipped > 1 ? 's' : '') + ' skipped — not images, over 15 MB, or past the ' + MAX_PHOTOS + '-photo limit', 'info');
+        if (!files.length) { e.target.value = ''; return; }
+
+        var results = new Array(files.length);            // keeps the picked order
+        var pending = files.length;
+        function finish() {
+          newImages = newImages.concat(results.filter(Boolean));
+          renderPhotoStrip();
+          e.target.value = '';
+        }
+        files.forEach(function (file, idx) {
+          var reader = new FileReader();
+          var name = file.name;
+          reader.onload = function (ev) {
+            shrinkDataUrl(ev.target.result, function (out) {
+              if (out) results[idx] = { src: out, name: name };
+              if (--pending === 0) finish();
+            });
+          };
+          reader.onerror = function () {
+            if (--pending === 0) finish();
+          };
+          reader.readAsDataURL(file);
+        });
       }
 
       if (uploadInp) {
         uploadInp.addEventListener('change', handleUploadChange);
-        document.getElementById('uploadClear').addEventListener('click', resetUpload);
+        document.getElementById('photoStrip').addEventListener('click', function (e) {
+          var x = e.target.closest('[data-chip]');
+          if (!x) return;
+          newImages.splice(parseInt(x.getAttribute('data-chip'), 10), 1);
+          renderPhotoStrip();
+        });
       }
 
       /* ---- Edit car details (modal) ----------------------------------------
          "Edit Details" on a row opens this modal pre-filled with the car's
-         current values. Saving updates the car IN PLACE — its id, position
-         and sold status stay untouched. An uploaded photo replaces the image
-         link; leave both photo fields empty to keep the current photo.
+         values and photo chips. Saving updates the car IN PLACE — id,
+         position and sold status stay untouched. Add or remove photos freely
+         (max 6); the image link is only used when there are no photos.
          Close without saving: Cancel, ✕, Escape or clicking the backdrop. */
       var editingId = null;
-      var editImageBase64 = null;
+      var editImages = [];                                // photo srcs
 
       var editModal = document.getElementById('editModal');
       var editForm = document.getElementById('editForm');
@@ -964,79 +1033,85 @@
       var eDesc = document.getElementById('e_desc');
       var eCurrentThumb = document.getElementById('e_currentThumb');
       var eUploadInp = document.getElementById('e_image_file');
-      var eUploadPrev = document.getElementById('e_uploadPreview');
-      var eUploadThumb = document.getElementById('e_uploadThumb');
-      var eUploadNameEl = document.getElementById('e_uploadName');
+      var eStrip = document.getElementById('e_photoStrip');
+      var ePriceLabel = document.getElementById('e_price_label');
 
-      function updateEditPreview(fileName) {
-        if (!eUploadPrev) return;
-        if (!editImageBase64) {
-          eUploadPrev.hidden = true;
-          eUploadThumb.removeAttribute('src');
-          eUploadNameEl.textContent = '';
-          return;
-        }
-        eUploadThumb.src = editImageBase64;
-        eUploadNameEl.textContent = fileName || 'Selected photo';
-        eUploadPrev.hidden = false;
+      function renderEditStrip() {
+        if (!eStrip) return;
+        eStrip.innerHTML = editImages.map(function (src, i) {
+          return '<div class="photo-chip">' +
+                   '<img src="' + esc(src) + '" alt="Photo ' + (i + 1) + '">' +
+                   '<button type="button" class="chip-x" data-echip="' + i + '" aria-label="Remove photo ' + (i + 1) + '">&times;</button>' +
+                 '</div>';
+        }).join('');
+        if (eCurrentThumb) eCurrentThumb.src = editImages.length ? editImages[0] : PLACEHOLDER_IMG;
       }
 
       function resetEditUpload() {
-        editImageBase64 = null;
         if (eUploadInp) eUploadInp.value = '';
-        updateEditPreview('');
       }
 
       function handleEditUploadChange(e) {
-        var file = e.target.files && e.target.files[0];
-        if (!file) { resetEditUpload(); return; }               // picker cancelled
-        if (!/^image\//.test(file.type)) {
-          toast('That file is not an image — please pick a JPG, PNG or WebP photo', 'error');
-          eUploadInp.value = '';
+        var list = e.target.files;
+        if (!list || !list.length) return;                // picker cancelled
+        var room = MAX_PHOTOS - editImages.length;
+        if (room <= 0) {
+          toast('Already ' + MAX_PHOTOS + ' photos — remove one first', 'error');
+          e.target.value = '';
           return;
         }
-        if (file.size > 15 * 1024 * 1024) {
-          toast('That photo is too large (over 15 MB) — please pick a smaller one', 'error');
-          eUploadInp.value = '';
-          return;
+        var files = [], skipped = 0;
+        for (var i = 0; i < list.length; i++) {
+          var f = list[i];
+          if (!/^image\//.test(f.type) || f.size > 15 * 1024 * 1024) { skipped++; continue; }
+          if (files.length < room) files.push(f); else skipped++;
         }
-        var fileName = file.name;
-        var reader = new FileReader();
-        reader.onload = function (ev) {
-          shrinkDataUrl(ev.target.result, function (out) {
-            if (!out) {
-              toast('Could not read that photo — try a JPG or PNG instead', 'error');
-              eUploadInp.value = '';
-              return;
-            }
-            editImageBase64 = out;
-            updateEditPreview(fileName);
-          });
-        };
-        reader.onerror = function () {
-          toast('Could not read that photo — try a JPG or PNG instead', 'error');
-          eUploadInp.value = '';
-        };
-        reader.readAsDataURL(file);
+        if (skipped) toast(skipped + ' file' + (skipped > 1 ? 's' : '') + ' skipped — not images, over 15 MB, or past the ' + MAX_PHOTOS + '-photo limit', 'info');
+        if (!files.length) { e.target.value = ''; return; }
+
+        var results = new Array(files.length);            // keeps the picked order
+        var pending = files.length;
+        function finish() {
+          editImages = editImages.concat(results.filter(Boolean));
+          renderEditStrip();
+          e.target.value = '';
+        }
+        files.forEach(function (file, idx) {
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            shrinkDataUrl(ev.target.result, function (out) {
+              if (out) results[idx] = out;
+              if (--pending === 0) finish();
+            });
+          };
+          reader.onerror = function () {
+            if (--pending === 0) finish();
+          };
+          reader.readAsDataURL(file);
+        });
       }
 
       function openEdit(id) {
         var car = findCar(id);
         if (!car) return;
         editingId = car.id;
+        editImages = carImages(car).slice();              // existing photos as chips
+        renderEditStrip();
         resetEditUpload();
         eName.value = car.name || '';
         ePrice.value = car.price != null ? car.price : '';
         eMiles.value = car.miles != null ? car.miles : '';
         eDesc.value = car.description || '';
-        eImage.value = String(car.image || '').indexOf('data:') === 0 ? '' : (car.image || '');
-        if (eCurrentThumb) eCurrentThumb.src = car.image || PLACEHOLDER_IMG;
+        eImage.value = '';                                // link only used if no photos
+        if (ePriceLabel) ePriceLabel.textContent = 'Price (' + currentCurrency().code + ')';
         editModal.hidden = false;
         eName.focus();
       }
 
       function closeEdit() {
         editingId = null;
+        editImages = [];
+        renderEditStrip();
         resetEditUpload();
         if (editModal) editModal.hidden = true;
       }
@@ -1052,15 +1127,20 @@
 
         if (!name) { alert('Please enter the car name.'); eName.focus(); return; }
         if (isNaN(price) || price <= 0) { alert('Please enter a price.'); ePrice.focus(); return; }
-        if (isNaN(miles) || miles < 0) miles = car.miles || 0;  // blank miles keeps the old value
+        if (isNaN(miles) || miles < 0) miles = car.miles || 0;   // blank keeps old
 
-        var yearMatch = name.match(/\b(19|20)\d{2}\b/);         // year follows the name
+        var yearMatch = name.match(/\b(19|20)\d{2}\b/);
         car.name = name;
         car.price = Math.round(price);
         car.miles = miles;
         car.year = yearMatch ? parseInt(yearMatch[0], 10) : car.year;
         car.description = eDesc.value.trim();
-        car.image = editImageBase64 || eImage.value.trim() || car.image;  // keep old photo if empty
+
+        var imgs = editImages.slice();
+        if (!imgs.length && eImage.value.trim()) imgs = [eImage.value.trim()];
+        if (!imgs.length) imgs = carImages(car);          // nothing chosen -> keep photos
+        car.images = imgs;
+        delete car.image;                                 // images[] is the single source now
 
         save();
         closeEdit();
@@ -1072,8 +1152,13 @@
         document.getElementById('editCancel').addEventListener('click', closeEdit);
         document.getElementById('editCloseX').addEventListener('click', closeEdit);
         eUploadInp.addEventListener('change', handleEditUploadChange);
-        document.getElementById('e_uploadClear').addEventListener('click', resetEditUpload);
-        editModal.addEventListener('click', function (e) {   // click on the dark backdrop closes
+        eStrip.addEventListener('click', function (e) {
+          var x = e.target.closest('[data-echip]');
+          if (!x) return;
+          editImages.splice(parseInt(x.getAttribute('data-echip'), 10), 1);
+          renderEditStrip();
+        });
+        editModal.addEventListener('click', function (e) {   // backdrop click closes
           if (e.target === editModal) closeEdit();
         });
         document.addEventListener('keydown', function (e) {  // Escape closes
@@ -1101,6 +1186,20 @@
           el.src = PLACEHOLDER_IMG;
         }
       }, true);
+
+      /* ---- Currency selector in the header -------------------------------- */
+      var curSel = document.getElementById('currencySel');
+      if (curSel) {
+        curSel.innerHTML = CURRENCIES.map(function (c) {
+          return '<option value="' + c.code + '">' + c.code + ' — ' + c.name + '</option>';
+        }).join('');
+        curSel.value = currentCurrency().code;
+        curSel.addEventListener('change', function () {
+          try { storage.setItem(CUR_KEY, curSel.value); } catch (err) {}
+          render();
+          toast('Prices now shown in ' + curSel.value + '. Existing prices are relabelled, NOT converted — update your car prices if needed.', 'info');
+        });
+      }
 
       /* Exposed for the browser console */
       window.render = render;

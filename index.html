@@ -198,6 +198,25 @@
     .footer-contact a:hover{text-decoration:underline}
     .footer-contact .wa-link{color:#25D366}
 
+    /* ---------- Photo gallery + venue chip ---------- */
+    .card-photo{cursor:pointer}
+    .img-badge{position:absolute;right:.55rem;bottom:.55rem;background:rgba(0,0,0,.75);color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .45rem;border-radius:.45rem}
+    .loc-chip{display:inline-flex;align-items:center;gap:.45rem;border:1px solid #333;border-radius:.75rem;background:#181818;color:#ccc;padding:.65rem 1.1rem;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;transition:border-color .15s ease,color .15s ease}
+    .loc-chip:hover{border-color:rgba(255,140,66,.6);color:#fff}
+    .footer-contact .loc-link{color:#999;font-weight:500}
+    .lb-overlay{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem}
+    .lb-overlay[hidden]{display:none}
+    .lb-main{display:flex;align-items:center;gap:.7rem}
+    .lb-img{max-width:min(90vw,54rem);max-height:68vh;border-radius:.9rem;object-fit:contain;background:#111}
+    .lb-nav{flex:none;width:2.6rem;height:2.6rem;border:1px solid #333;border-radius:9999px;background:rgba(20,20,20,.85);color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
+    .lb-nav:hover{border-color:#FF8C42;color:#FF8C42}
+    .lb-close{position:absolute;top:1rem;right:1rem;width:2.4rem;height:2.4rem;border:1px solid #333;border-radius:.7rem;background:rgba(20,20,20,.85);color:#aaa;font-size:1.4rem;line-height:1;cursor:pointer}
+    .lb-close:hover{color:#f87171;border-color:rgba(248,113,113,.5)}
+    .lb-thumbs{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin-top:1rem}
+    .lb-thumb{width:4.2rem;height:3rem;border-radius:.5rem;object-fit:cover;border:2px solid transparent;cursor:pointer;opacity:.55}
+    .lb-thumb.on{border-color:#FF8C42;opacity:1}
+    .lb-count{margin:.6rem 0 0;font-size:.8rem;color:#999}
+
     /* ---------- Responsive variants ---------- */
     @media (min-width:640px){
       .phone-num,.wa-label{display:inline}
@@ -249,11 +268,11 @@
 
       <!-- Call / WhatsApp -->
       <div class="contact-actions">
-        <a href="tel:+256763500008" class="phone-btn" aria-label="Call Cheap Motors: 0763 500 008">
+        <a href="tel:+256756391809" class="phone-btn" aria-label="Call Cheap Motors: 0756 391 809">
           <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          <span class="phone-num">0763 500 008</span>
+          <span class="phone-num">0756 391 809</span>
         </a>
-        <a href="https://wa.me/256763500008?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." class="wa-btn" target="_blank" rel="noopener" aria-label="Chat with Cheap Motors on WhatsApp">
+        <a href="https://wa.me/256756391809?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." class="wa-btn" target="_blank" rel="noopener" aria-label="Chat with Cheap Motors on WhatsApp">
           <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
           <span class="wa-label">WhatsApp</span>
         </a>
@@ -298,13 +317,17 @@
         </a>
 
         <div class="hero-contact">
-          <a href="tel:+256763500008" class="phone-btn">
+          <a href="tel:+256756391809" class="phone-btn">
             <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            <span>Call: 0763 500 008</span>
+            <span>Call: 0756 391 809</span>
           </a>
-          <a href="https://wa.me/256763500008?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." class="wa-btn" target="_blank" rel="noopener">
+          <a href="https://wa.me/256756391809?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." class="wa-btn" target="_blank" rel="noopener">
             <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             <span>WhatsApp Us</span>
+          </a>
+          <a class="loc-chip" href="https://www.google.com/maps/search/?api=1&amp;query=Lumumba+Avenue,+Nakasero,+Kampala" target="_blank" rel="noopener" title="Find our showroom on Google Maps">
+            <svg style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>Lumumba Avenue, Nakasero · Kampala</span>
           </a>
         </div>
       </div>
@@ -334,13 +357,27 @@
       <p class="text-sm text-[#777]">Find Your Next Car at Cheap Prices.</p>
       <div class="footer-contact">
         <span>Call or WhatsApp us:</span>
-        <a href="tel:+256763500008">0763 500 008</a>
+        <a href="tel:+256756391809">0756 391 809</a>
         <span aria-hidden="true">·</span>
-        <a class="wa-link" href="https://wa.me/256763500008?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." target="_blank" rel="noopener">Chat on WhatsApp</a>
+        <a class="wa-link" href="https://wa.me/256756391809?text=Hi%20Cheap%20Motors!%20I%20would%20like%20to%20ask%20about%20your%20cars." target="_blank" rel="noopener">Chat on WhatsApp</a>
+        <span aria-hidden="true">·</span>
+        <a class="loc-link" href="https://www.google.com/maps/search/?api=1&amp;query=Lumumba+Avenue,+Nakasero,+Kampala" target="_blank" rel="noopener">Lumumba Avenue, Nakasero — Kampala</a>
       </div>
       <p class="text-xs text-[#555]">© 2026 Cheap Motors. All rights reserved.</p>
     </div>
   </footer>
+  <!-- ============================ PHOTO VIEWER ============================ -->
+  <div id="lightbox" class="lb-overlay" hidden role="dialog" aria-modal="true" aria-label="Car photos">
+    <button type="button" id="lbClose" class="lb-close" aria-label="Close photo viewer">&times;</button>
+    <div class="lb-main">
+      <button type="button" id="lbPrev" class="lb-nav" aria-label="Previous photo">&lsaquo;</button>
+      <img id="lbImg" class="lb-img" alt="">
+      <button type="button" id="lbNext" class="lb-nav" aria-label="Next photo">&rsaquo;</button>
+    </div>
+    <p id="lbCount" class="lb-count"></p>
+    <div id="lbThumbs" class="lb-thumbs"></div>
+  </div>
+
   <script>
     (function () {
       'use strict';
@@ -405,7 +442,7 @@
           name: '2021 Toyota Camry SE',
           year: 2021,
           miles: 32450,
-          price: 18500,
+          price: 68500000,
           image: IMG.camry,
           description: 'One-owner Camry SE in excellent condition. Sport-tuned suspension, backup camera, Apple CarPlay, and Toyota Safety Sense. Serviced regularly and ready to drive home today.',
           status: 'available',
@@ -416,7 +453,7 @@
           name: '2022 Ford Mustang GT',
           year: 2022,
           miles: 18200,
-          price: 29500,
+          price: 109000000,
           image: IMG.mustang,
           description: 'Iconic 5.0L V8 Mustang GT with under 20k miles. Premium sound, leather interior, and that unmistakable GT roar. Garage kept and spotless inside and out.',
           status: 'available',
@@ -427,7 +464,7 @@
           name: '2022 Tesla Model 3',
           year: 2022,
           miles: 22100,
-          price: 36200,
+          price: 134000000,
           image: IMG.tesla,
           description: 'Long Range Model 3 with Autopilot, panoramic glass roof, and premium interior. Supercharging access included — zero gas, all torque.',
           status: 'available',
@@ -441,17 +478,66 @@
           return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
         });
       }
-      function fmtPrice(n) { return '$' + Number(n || 0).toLocaleString('en-US'); }
+      function fmtPrice(n) { return currentCurrency().symbol + Number(n || 0).toLocaleString('en-US'); }
       function fmtMiles(n) { return Number(n || 0).toLocaleString('en-US') + ' miles'; }
 
+      /* ---- Currency (set on the owner dashboard; both pages read it) ----- */
+      var CUR_KEY = 'cheapMotorsCurrency';
+      var CURRENCIES = [
+        { code: 'UGX', name: 'Ugandan Shilling', symbol: 'UGX ' },
+        { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh ' },
+        { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh ' },
+        { code: 'RWF', name: 'Rwandan Franc', symbol: 'RF ' },
+        { code: 'USD', name: 'US Dollar', symbol: '$' },
+        { code: 'EUR', name: 'Euro', symbol: '€' },
+        { code: 'GBP', name: 'British Pound', symbol: '£' }
+      ];
+      function currentCurrency() {
+        var code = '';
+        try { code = storage.getItem(CUR_KEY) || ''; } catch (err) {}
+        for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].code === code) return CURRENCIES[i];
+        return CURRENCIES[0];                    // default: Ugandan Shilling
+      }
+
+      /* A car can carry several photos (up to 6). Older records have a
+         single "image" field — both shapes work through these helpers. */
+      function carImages(car) {
+        var arr = (car && Array.isArray(car.images)) ? car.images.filter(Boolean) : [];
+        if (arr.length) return arr;
+        if (car && car.image) return [car.image];
+        return [];
+      }
+      function coverImage(car) {
+        var a = carImages(car);
+        return a.length ? a[0] : DEFAULT_IMAGE;
+      }
+
+      /* One-time upgrade: the demo cars used to carry US-dollar prices
+         (18,500 / 29,500 / 36,200). If the stored data is still exactly that
+         untouched demo set, refresh it with the current shilling prices.
+         Anything the owner has edited is left completely alone. */
+      function looksLikeOldDemo(data) {
+        var ids = ['camry-2021', 'mustang-2022', 'tesla-2022'];
+        var names = ['2021 Toyota Camry SE', '2022 Ford Mustang GT', '2022 Tesla Model 3'];
+        var prices = [18500, 29500, 36200];
+        if (!Array.isArray(data) || data.length !== 3) return false;
+        for (var i = 0; i < 3; i++) {
+          if (!data[i] || String(data[i].id) !== ids[i]) return false;
+          if (String(data[i].name) !== names[i]) return false;
+          if (Number(data[i].price) !== prices[i]) return false;
+          if (isSold(data[i])) return false;
+        }
+        return true;
+      }
+
       /* ---- Contact links (phone + WhatsApp) -------------------------------
-         Display:  0763 500 008 (local, Uganda)
+         Display:  0756 391 809 (local, Uganda)
          tel:      international format so it works from any device
          WhatsApp: wa.me needs the number WITHOUT "+" and without the
                    leading 0 → 256 763 500 008                              */
-      var PHONE_DISPLAY = '0763 500 008';
-      var PHONE_TEL = 'tel:+256763500008';
-      var WA_NUMBER = '256763500008';
+      var PHONE_DISPLAY = '0756 391 809';
+      var PHONE_TEL = 'tel:+256756391809';
+      var WA_NUMBER = '256756391809';
 
       function waLink(car) {
         var msg = car
@@ -478,7 +564,12 @@
           }
           var data = JSON.parse(raw);
           if (!Array.isArray(data)) throw new Error('Unexpected data');
-          return data.filter(function (c) { return c && typeof c === 'object'; });
+          data = data.filter(function (c) { return c && typeof c === 'object'; });
+          if (looksLikeOldDemo(data)) {            // untouched USD demo -> refresh prices
+            saveCars(DEFAULT_CARS);
+            return DEFAULT_CARS.slice();
+          }
+          return data;
         } catch (err) {
           return DEFAULT_CARS.slice();                 // corrupt data → fall back to defaults
         }
@@ -494,8 +585,11 @@
         }
         return `
         <article class="${cls}"${style}>
-          <img src="${esc(car.image || '')}" alt="${esc(car.name)}" loading="lazy"
-               class="h-40 w-full rounded-xl object-cover transition duration-500 group-hover:scale-105">
+          <div class="relative">
+            <img src="${esc(coverImage(car))}" alt="${esc(car.name)}" loading="lazy" data-action="photos" data-id="${esc(car.id)}"
+                 class="card-photo h-40 w-full rounded-xl object-cover transition duration-500 group-hover:scale-105">
+            ${carImages(car).length > 1 ? '<span class="img-badge">' + carImages(car).length + ' photos</span>' : ''}
+          </div>
           <div class="mt-4">
             <h3 class="text-lg font-bold text-white">${esc(car.name)}</h3>
             <p class="mt-1 text-sm text-[#999]">${fmtMiles(car.miles)}</p>
@@ -556,6 +650,9 @@
           return !isSold(c) && String(c.name || '').toLowerCase().includes(query);
         });
 
+        carById = {};                               // lookup for the photo viewer
+        visible.forEach(function (c) { carById[String(c.id)] = c; });
+
         if (countEl) {
           countEl.innerHTML = 'Showing <span class="font-bold text-white">' + visible.length +
             '</span> car' + (visible.length === 1 ? '' : 's') + ' available';
@@ -578,6 +675,9 @@
           return;
         }
 
+        var photo = e.target.closest('[data-action="photos"]');   // photo viewer
+        if (photo) { openLightbox(photo.getAttribute('data-id'), 0); return; }
+
         var btn = e.target.closest('[data-action="details"]');   // View Details
         if (!btn) return;
         var desc = grid.querySelector('[data-desc="' + btn.getAttribute('data-id') + '"]');
@@ -588,6 +688,56 @@
         if (label) label.textContent = hidden ? 'View Details' : 'Hide Details';
         var icon = btn.querySelector('svg');
         if (icon) icon.classList.toggle('rotate-180', !hidden);
+      });
+
+
+      /* ---- Photo viewer: click a car's photo to see all of its photos ---- */
+      var carById = {};
+      var lb = document.getElementById('lightbox');
+      var lbImg = document.getElementById('lbImg');
+      var lbThumbs = document.getElementById('lbThumbs');
+      var lbCount = document.getElementById('lbCount');
+      var lbPrev = document.getElementById('lbPrev');
+      var lbNext = document.getElementById('lbNext');
+      var lbCar = null, lbIndex = 0;
+
+      function renderLightbox() {
+        var imgs = carImages(lbCar);
+        if (!imgs.length) { closeLightbox(); return; }
+        lbIndex = ((lbIndex % imgs.length) + imgs.length) % imgs.length;
+        lbImg.src = imgs[lbIndex];
+        lbImg.alt = lbCar.name + ' — photo ' + (lbIndex + 1) + ' of ' + imgs.length;
+        lbCount.textContent = (lbIndex + 1) + ' / ' + imgs.length;
+        lbThumbs.innerHTML = imgs.length > 1 ? imgs.map(function (s, i) {
+          return '<img src="' + esc(s) + '" class="lb-thumb' + (i === lbIndex ? ' on' : '') + '" data-lb="' + i + '" alt="Photo ' + (i + 1) + '">';
+        }).join('') : '';
+        lbPrev.hidden = lbNext.hidden = imgs.length < 2;
+      }
+      function openLightbox(id, at) {
+        var car = carById[String(id)];
+        if (!car) return;
+        lbCar = car;
+        lbIndex = at || 0;
+        renderLightbox();
+        lb.hidden = false;
+      }
+      function closeLightbox() { lb.hidden = true; lbCar = null; }
+
+      lbPrev.addEventListener('click', function () { lbIndex--; renderLightbox(); });
+      lbNext.addEventListener('click', function () { lbIndex++; renderLightbox(); });
+      lbThumbs.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-lb]');
+        if (!t) return;
+        lbIndex = parseInt(t.getAttribute('data-lb'), 10);
+        renderLightbox();
+      });
+      document.getElementById('lbClose').addEventListener('click', closeLightbox);
+      lb.addEventListener('click', function (e) { if (e.target === lb) closeLightbox(); });
+      document.addEventListener('keydown', function (e) {
+        if (lb.hidden) return;
+        if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowLeft') { lbIndex--; renderLightbox(); }
+        else if (e.key === 'ArrowRight') { lbIndex++; renderLightbox(); }
       });
 
       /* ---- Live search: re-filter as you type --------------------------- */
