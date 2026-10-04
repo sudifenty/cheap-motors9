@@ -1,0 +1,21 @@
+name: Enable Pages (one-time helper)
+on: push
+permissions:
+  pages: write
+  contents: read
+jobs:
+  enable-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Turn on GitHub Pages (main branch, root folder)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=$(curl -sS -o /tmp/r.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" \
+            -d '{"source":{"branch":"main","path":"/"}}')
+          echo "Pages API returned HTTP $code"
+          cat /tmp/r.json || true
+          true
