@@ -1558,6 +1558,104 @@
           }
         }
       } catch (err) { /* local file or very old browser — local data is fine */ }
+
+      /* Live updates. When the dashboard on THIS page saves, it pushes the
+         cars straight into this view — no refresh. For every other open
+         tab (this device or any visitor), the page listens for Supabase
+         Realtime push notifications, with a tiny background check every 25s
+         as the safety net — new cars appear on their own everywhere. */
+      window.cmPushSiteCars = function (arr, cur) {
+        try {
+          remoteCars = (arr || []).filter(function (c) { return c && typeof c === 'object'; });
+          if (cur) remoteCur = String(cur);
+          loadCars();
+        } catch (err) {}
+      };
+      window.addEventListener('storage', function (e) {   /* local mode: another tab changed the data */
+        if (sbConfigured()) return;
+        if (e && e.key && e.key !== STORE_KEY && e.key !== CUR_KEY) return;
+        remoteCars = null;
+        loadCars();
+      });
+      (function liveUpdates() {
+        if (!sbConfigured() || typeof fetch !== 'function') return;
+        var lastPrint = null;
+        function adoptCloud() {
+          sbPublicRead().then(function (res) {
+            if (!res) return;
+            if (res.settings.dashboard && window.cmSetExternalDashboard) {
+              window.cmSetExternalDashboard(String(res.settings.dashboard));
+            }
+            adoptShared({ cars: res.cars, currency: res.settings.currency });
+          }).catch(function () {});
+        }
+        function fingerprint(first) {
+          Promise.all([
+            fetch(SUPABASE_URL + '/rest/v1/cars?select=id,updated_at', { headers: sbAnonHeaders(), cache: 'no-cache' })
+              .then(function (r) { return r.ok ? r.json() : null; }),
+            fetch(SUPABASE_URL + '/rest/v1/app_settings?select=key,value', { headers: sbAnonHeaders(), cache: 'no-cache' })
+              .then(function (r) { return r.ok ? r.json() : null; })
+          ]).then(function (a) {
+            var print;
+            try { print = JSON.stringify(a); } catch (err) { return; }
+            if (first) { lastPrint = print; return; }
+            if (print !== lastPrint) { lastPrint = print; adoptCloud(); }
+          }).catch(function () {});
+        }
+        fingerprint(true);                               /* remember the current state */
+        setInterval(function () {                        /* safety net while the tab stays open */
+          if (document.hidden) return;
+          fingerprint(false);
+        }, 25000);
+        if (typeof WebSocket === 'undefined') return;    /* very old browser: background check only */
+        var ws = null, hb = null, tries = 0, rtDead = false;
+        function connect() {
+          if (rtDead) return;
+          try {
+            ws = new WebSocket(SUPABASE_URL.replace(/^http/, 'ws') +
+              '/realtime/v1/websocket?apikey=' + encodeURIComponent(SUPABASE_ANON_KEY) + '&vsn=1.0.0');
+          } catch (err) { return; }
+          ws.onopen = function () {
+            tries = 0;
+            ws.send(JSON.stringify({
+              topic: 'realtime:site', event: 'phx_join',
+              payload: {
+                config: {
+                  broadcast: { ack: false, self: false },
+                  presence: { key: '' },
+                  postgres_changes: [
+                    { event: '*', schema: 'public', table: 'cars' },
+                    { event: '*', schema: 'public', table: 'app_settings' }
+                  ]
+                },
+                access_token: SUPABASE_ANON_KEY
+              },
+              ref: '1'
+            }));
+            hb = setInterval(function () {
+              if (ws && ws.readyState === 1) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: '2' }));
+            }, 25000);
+          };
+          ws.onmessage = function (m) {
+            try {
+              var msg = JSON.parse(m.data);
+              if (msg.event === 'system' && msg.payload && msg.payload.status === 'error') {
+                rtDead = true;                            /* Realtime not enabled in the project — the background check covers us */
+                try { ws.close(); } catch (err) {}
+                return;
+              }
+              if (msg.event === 'postgres_changes') adoptCloud();
+            } catch (err) {}
+          };
+          ws.onclose = function () {
+            ws = null;
+            if (hb) { clearInterval(hb); hb = null; }
+            if (!rtDead && tries < 6) { tries++; setTimeout(connect, 3000 * tries); }
+          };
+          ws.onerror = function () { try { ws.close(); } catch (err) {} };
+        }
+        connect();
+      })();
     })();
     (function () {
       'use strict';
@@ -1759,6 +1857,7 @@
         }
         markDirty();                               // not synced to the cloud yet
         render();
+        if (window.cmPushSiteCars) window.cmPushSiteCars(cars, currentCurrency().code);   // site view updates instantly
         queueSync();                               // push to Supabase when connected
       }
 
@@ -2333,6 +2432,7 @@
               syncBusy = false;
               refreshCloudPill();
               if (manual) toast('Synced — your changes are live for every visitor.', 'success');
+              else toast('✅ Car published live!', 'success');
               if (syncPending) { syncPending = false; queueSync(); }
             })
             .catch(function (err) {
@@ -2473,6 +2573,20 @@
               .catch(function () {});
           } catch (err) {}
         }
+        /* Fresh data every time the dashboard is opened on this page (unless
+           this device has unsynced changes) — so two devices never
+           overwrite each other with stale inventories. */
+        window.cmDashboardRefresh = function () {
+          try {
+            if (!sbConfigured()) return;
+            var dirty = false;
+            try { dirty = storage.getItem(DIRTY_KEY) === '1'; } catch (err) {}
+            if (dirty) return;
+            sbPublicRead().then(function (res) {
+              if (res) adopt(res.cars, res.settings.currency);
+            }).catch(function () {});
+          } catch (err) {}
+        };
         try {
           if (sbConfigured()) {
             sbPublicRead()
@@ -2536,7 +2650,7 @@
 
       gateForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); if (window.cmCloudCheck) window.cmCloudCheck(); }
+        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); if (window.cmCloudCheck) window.cmCloudCheck(); if (window.cmDashboardRefresh) window.cmDashboardRefresh(); }
         else { gateError.hidden = false; gateInput.value = ''; gateInput.focus(); }
       });
       document.getElementById('gateCancel').addEventListener('click', closeGate);
