@@ -207,6 +207,13 @@
 
     /* ---------- Photo gallery + venue chip ---------- */
     .card-photo{cursor:pointer}
+    .skel-card{overflow:hidden;border:1px solid #262626;background:#1a1a1a;border-radius:1rem;padding:1.25rem}
+    .skel-photo{height:10rem;width:100%;border-radius:.75rem;background:#232323;animation:skelPulse 1.3s ease-in-out infinite}
+    .skel-line{height:.85rem;border-radius:.5rem;background:#232323;margin-top:1rem;animation:skelPulse 1.3s ease-in-out infinite}
+    .skel-w2{width:65%}
+    .skel-w1{width:38%}
+    .skel-cta{height:2.4rem;border-radius:.75rem;background:#232323;margin-top:1.1rem;animation:skelPulse 1.3s ease-in-out infinite}
+    @keyframes skelPulse{0%,100%{opacity:.45}50%{opacity:.9}}
     .img-badge{position:absolute;right:.55rem;bottom:.55rem;background:rgba(0,0,0,.75);color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .45rem;border-radius:.45rem}
     .loc-chip{display:inline-flex;align-items:center;gap:.45rem;border:1px solid #333;border-radius:.75rem;background:#181818;color:#ccc;padding:.65rem 1.1rem;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;transition:border-color .15s ease,color .15s ease}
     .loc-chip:hover{border-color:rgba(255,140,66,.6);color:#fff}
@@ -1401,6 +1408,8 @@
                                        // not again on every keystroke
 
       function loadCars() {
+        if (!remoteCars && cloudPending) { renderLoading(); return; }   /* cloud data on its way */
+        if (!remoteCars && cloudDead) { renderUnavailable(); return; }  /* cloud unreachable */
         var searchEl = document.getElementById('search');
         var rawQuery = searchEl && searchEl.value ? searchEl.value.trim() : '';
         var query = rawQuery.toLowerCase();
@@ -1514,6 +1523,92 @@
       /* Exposed so you can re-render from the browser console: loadCars() */
       window.loadCars = loadCars;
 
+      /* ---- First paint: real cars, never the demos ----------------------- */
+      /* With the cloud configured, visitors must never see the built-in demo
+         cars flash by while the real inventory loads. The first paint is:
+         (1) this browser's cached copy of the last cloud inventory — real
+             cars, instantly; or, if the device has real unsynced local cars
+             (the owner's), those; (2) on a very first visit, a tidy loading
+             state until the cloud answers. Demo cars are only ever shown
+             when the file is NOT connected to a cloud project. */
+      var CACHE_KEY = 'cheapMotorsCloudCache', CUR_CACHE_KEY = 'cheapMotorsCloudCur';
+      var cloudPending = false, cloudDead = false;
+
+      function readCloudCache() {
+        try {
+          var arr = JSON.parse(storage.getItem(CACHE_KEY) || '[]');
+          if (!Array.isArray(arr)) return null;
+          arr = arr.filter(function (c) { return c && typeof c === 'object'; });
+          if (!arr.length) return null;
+          var cur = '';
+          try { cur = storage.getItem(CUR_CACHE_KEY) || ''; } catch (err) {}
+          return { cars: arr, cur: cur };
+        } catch (err) { return null; }
+      }
+      function writeCloudCache(arr, cur) {
+        try {                                  /* best effort; a full device is fine */
+          storage.setItem(CACHE_KEY, JSON.stringify(arr || []));
+          if (cur) storage.setItem(CUR_CACHE_KEY, String(cur));
+        } catch (err) {}
+      }
+
+      /* True when the saved data is only the untouched built-in demo cars
+         (today's UGX trio or the older USD trio) — nothing real to show. */
+      function isJustDemos(arr) {
+        if (!Array.isArray(arr) || !arr.length) return false;
+        if (looksLikeOldDemo(arr)) return true;
+        var ids = DEFAULT_CARS.map(function (c) { return String(c.id); });
+        return arr.length === ids.length && arr.every(function (c) {
+          return c && ids.indexOf(String(c.id)) !== -1;
+        });
+      }
+
+      /* This browser's own saved cars, when they are real ones (e.g. the
+         owner's unsynced work) — used for the first paint only. */
+      function peekRealLocalCars() {
+        try {
+          var arr = JSON.parse(storage.getItem(STORE_KEY) || '[]');
+          if (!Array.isArray(arr)) return null;
+          arr = arr.filter(function (c) { return c && typeof c === 'object'; });
+          if (!arr.length || isJustDemos(arr)) return null;
+          return { cars: arr, cur: '' };
+        } catch (err) { return null; }
+      }
+
+      function renderLoading() {
+        if (countEl) countEl.textContent = 'Loading cars…';
+        var one = '<div class="skel-card" aria-hidden="true"><div class="skel-photo"></div>' +
+                  '<div class="skel-line skel-w2"></div><div class="skel-line skel-w1"></div>' +
+                  '<div class="skel-cta"></div></div>';
+        var out = '';
+        for (var i = 0; i < 6; i++) out += one;
+        grid.innerHTML = out;
+      }
+      function renderUnavailable() {
+        if (countEl) countEl.textContent = 'Cars unavailable right now';
+        grid.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#2f2f2f] bg-[#151515] px-6 py-16 text-center">
+          <svg class="h-12 w-12 text-[#3a3a3a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4"/><path d="M12 16h.01"/><circle cx="12" cy="12" r="10"/></svg>
+          <p class="mt-4 text-lg font-semibold text-white">Couldn&rsquo;t load the cars</p>
+          <p class="mt-1 max-w-sm text-sm text-[#888]">Check your internet connection and refresh the page to try again.</p>
+        </div>`;
+      }
+      function cloudGaveUp() {           /* nothing arrived: honest message, never demos */
+        if (remoteCars) return;
+        cloudPending = false;
+        cloudDead = true;
+        loadCars();
+      }
+
+      if (sbConfigured() && typeof fetch === 'function') {
+        var preCloud = readCloudCache() || peekRealLocalCars();
+        if (preCloud) {
+          remoteCars = preCloud.cars;
+          if (preCloud.cur) remoteCur = preCloud.cur;
+        } else {
+          cloudPending = true;                          /* first visit: loading state */
+        }
+      }
       loadCars();
 
       /* Shared inventory. Supabase first — live data, instantly visible to
@@ -1525,6 +1620,8 @@
         if (!arr || !arr.length) return false;
         remoteCars = arr.filter(function (c) { return c && typeof c === 'object'; });
         if (obj.currency) remoteCur = String(obj.currency);
+        cloudPending = cloudDead = false;
+        writeCloudCache(remoteCars, obj.currency);  // next visit paints these instantly
         loadCars();                                // re-render with the shared data
         return true;
       }
@@ -1533,13 +1630,13 @@
           fetch('cars.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-cache' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (obj) {
-              if (!obj) return;
+              if (!obj) { cloudGaveUp(); return; }
               if (obj.dashboard && window.cmSetExternalDashboard) {
                 window.cmSetExternalDashboard(String(obj.dashboard));
               }
               adoptShared(obj);
             })
-            .catch(function () { /* offline or not published — local data is fine */ });
+            .catch(function () { cloudGaveUp(); /* offline or not published */ });
         } catch (err) {}
       }
       try {
@@ -1560,7 +1657,7 @@
             legacyShared();
           }
         }
-      } catch (err) { /* local file or very old browser — local data is fine */ }
+      } catch (err) { cloudGaveUp(); /* very old browser */ }
 
       /* Live updates. When the dashboard on THIS page saves, it pushes the
          cars straight into this view — no refresh. For every other open
@@ -1571,6 +1668,8 @@
         try {
           remoteCars = (arr || []).filter(function (c) { return c && typeof c === 'object'; });
           if (cur) remoteCur = String(cur);
+          cloudPending = cloudDead = false;
+          writeCloudCache(remoteCars, cur);         // keep the first-paint cache fresh
           loadCars();
         } catch (err) {}
       };
@@ -1834,14 +1933,16 @@
           var raw = storage.getItem(STORE_KEY);
           if (raw === null || raw === '') {          // nothing saved yet → seed the 3 defaults
             raw = JSON.stringify(DEFAULT_CARS);
-            try { storage.setItem(STORE_KEY, raw); } catch (err) {}
+            /* Cloud connected: don't write demo cars into this browser —
+               the dashboard takes its real data from Supabase. */
+            if (!sbConfigured()) { try { storage.setItem(STORE_KEY, raw); } catch (err) {} }
           }
           var data = JSON.parse(raw);
           if (!Array.isArray(data)) throw new Error('Unexpected data');
           data = data.filter(function (c) { return c && typeof c === 'object'; });
           if (looksLikeOldDemo(data)) {            // untouched USD demo -> refresh prices
             data = DEFAULT_CARS.slice();
-            try { storage.setItem(STORE_KEY, JSON.stringify(data)); } catch (err) {}
+            if (!sbConfigured()) { try { storage.setItem(STORE_KEY, JSON.stringify(data)); } catch (err) {} }
           }
           return data;
         } catch (err) {
