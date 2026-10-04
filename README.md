@@ -11,9 +11,22 @@ their next refresh. No publish button, no tokens, nothing to remember.
 | `README.md` | This guide |
 
 ## Run it on your computer
-Double-click `index.html`. Any modern browser works. Cars and photos are
-saved in that browser's localStorage, and uploaded photos are compressed
-automatically (max 900px, JPEG, up to 6 per car).
+Double-click `index.html`. Any modern browser works. Your inventory lives
+in the Supabase cloud; uploaded photos are compressed automatically in the
+browser (≤900px JPEG, about 100–280 KB each, up to 6 per car).
+
+## Photos, storage and the cloud
+
+- **Photos are compressed before they are saved** (≤900px JPEG, roughly
+  100–280 KB each), so cars stay small and the website stays fast even on
+  mobile data.
+- **The cloud is the real home of your inventory.** The browser's own
+  storage (about 5 MB) is only an offline copy. If it ever fills up, cars
+  keep saving and syncing normally — the dashboard just tells you the
+  offline copy is paused. Your live website is not affected.
+- After updating to this version, the **first sync automatically
+  re-compresses older, oversized photos** — the website gets lighter and
+  the offline copy fits on the device again.
 
 ## Put it online with GitHub Desktop (step by step)
 
@@ -133,7 +146,8 @@ your owner account (step 4) can change the inventory — visitors just read it.
 ## Everyday use (the owner's workflow)
 
 1. Open your website → **Owner Login** → type the dashboard passcode.
-2. Add or edit cars — up to 6 photos each. Every save is pushed to the
+2. Add or edit cars — up to 6 photos each, plus a description (customers
+   see it in View Details). Every save is pushed to the
    cloud automatically (you'll see the pill flash **Syncing…** then **Live**).
    On a new device or website address, the cloud sign-in form opens **by
    itself** the first time you enter the dashboard — sign in once there and
