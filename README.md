@@ -1,13 +1,13 @@
 # Cheap Motors — Dealership Website
 
 A car dealership website in ONE file: plain HTML, Tailwind CSS (CDN) and
-vanilla JavaScript. No backend on this repository — the live inventory is a
-small `cars.json` file that the owner publishes from the dashboard.
+vanilla JavaScript. The live inventory is stored in a free **Supabase**
+cloud database — you add a car in the dashboard, every visitor sees it on
+their next refresh. No publish button, no tokens, nothing to remember.
 
 | File | What it is |
 |---|---|
 | `index.html` | The whole website AND the owner dashboard in one page. Customers see the car grid, photo galleries, search, contact buttons and showroom location. The **Owner Login** button (top right) opens the dashboard on the same page behind a passcode |
-| `cars.json` | Created automatically by "Publish to Website" — the shared inventory your visitors see. Do not edit it by hand |
 | `README.md` | This guide |
 
 ## Run it on your computer
@@ -15,7 +15,7 @@ Double-click `index.html`. Any modern browser works. Cars and photos are
 saved in that browser's localStorage, and uploaded photos are compressed
 automatically (max 900px, JPEG, up to 6 per car).
 
-## Publish it with GitHub Desktop (step by step)
+## Put it online with GitHub Desktop (step by step)
 
 1. **Extract this ZIP first.** You end up with **one folder** that directly
    contains `index.html` and `README.md`. Do not drag the ZIP itself into
@@ -29,30 +29,137 @@ automatically (max 900px, JPEG, up to 6 per car).
    **Folder: /(root)** → **Save**.
 5. Wait 2–10 minutes, then visit `https://YOUR-USERNAME.github.io/REPO-NAME/`
 
-## Adding cars (the owner's workflow)
-1. Open your website and click **Owner Login** (password: set in `index.html`
-   — see "Changing the dashboard password" below).
-2. Add or edit cars — up to 6 photos each. Changes are saved in your browser
-   immediately.
-3. Click **Publish to Website**. This saves `cars.json` into this repository,
-   and every visitor sees the same inventory after ~5–10 minutes.
-   The first time it asks for your GitHub repository name and a fine-grained
-   token (github.com → Settings → Developer settings → Fine-grained tokens →
-   only this repository → Contents: Read and write). It is stored only in
-   your browser.
+## One-time cloud setup — Supabase (about 10 minutes)
 
-## Changing the dashboard password
+This is what makes added cars visible to every visitor. You do it **once**.
+
+1. Go to **supabase.com** → **Start your project** → sign up (free, no card
+   needed) → **New project**. Name it e.g. `cheap-motors`, pick any region,
+   choose a database password (save it somewhere, you rarely need it).
+2. Wait 1–2 minutes while the project is created.
+3. In the left menu open **SQL Editor** → **New query**, paste **all** of the
+   setup SQL from the box below, click **Run**. It should say "Success".
+4. Create your owner account: **Authentication → Users → Add user →**
+   enter your email + a password → **Auto Confirm User: ON** → save.
+   *This* email and password are what the dashboard will ask for later.
+5. Copy your connection values: **Project Settings (the gear) → API** →
+   copy the **Project URL** (looks like `https://abcd1234.supabase.co`) and
+   the **publishable** key (older projects call it the “anon public” key —
+   either works; it starts with `sb_publishable_`).
+6. Open `index.html` in any text editor (Notepad works). Press **Ctrl+F**,
+   search for `SUPABASE_URL` — you will find the connection block near the
+   top of the code. Paste your values between the quotes:
+
+   ```
+   var SUPABASE_URL = 'https://abcd1234.supabase.co';
+   var SUPABASE_ANON_KEY = 'sb_publishable_...your long key...';
+   ```
+
+   Save the file, then commit + push in GitHub Desktop.
+
+   > **This copy is already connected** — your project's URL and key are
+   > pasted in. Skip to step 7; redo this only if you ever create a new
+   > Supabase project.
+7. Open your website → **Owner Login** (passcode — see below) → click the
+   cloud button at the top (**Local only**) → enter your Supabase owner
+   email + password → **Save & Sign In**. Your current cars upload to the
+   cloud and the button turns green (**Live**). Done — from now on every
+   change you save is live for every visitor instantly.
+
+### The setup SQL (copy the whole box)
+
+```sql
+-- Cheap Motors — one-time setup. Paste ALL of this into
+-- Supabase → SQL Editor → New query → Run.
+-- If a "cars" table was created from a tutorial (title / price / location /
+-- image columns), this safely replaces it: the app stores photo galleries,
+-- descriptions, sold status and the car order, which that table cannot hold.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'cars'
+               and column_name = 'title') then
+    execute 'drop table public.cars cascade';
+  end if;
+end $$;
+
+create table if not exists public.cars (
+  id         text primary key,
+  data       jsonb not null,
+  pos        int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.app_settings (
+  key   text primary key,
+  value text
+);
+
+alter table public.cars         enable row level security;
+alter table public.app_settings enable row level security;
+
+drop policy if exists "cars readable by everyone"     on public.cars;
+drop policy if exists "settings readable by everyone" on public.app_settings;
+drop policy if exists "owner manages cars"            on public.cars;
+drop policy if exists "owner manages settings"        on public.app_settings;
+
+-- Visitors (and the website) may READ the inventory…
+create policy "cars readable by everyone"     on public.cars         for select using (true);
+create policy "settings readable by everyone" on public.app_settings for select using (true);
+
+-- …but only YOU (signed in with your owner account) may change anything.
+create policy "owner manages cars"     on public.cars         for all to authenticated using (true) with check (true);
+create policy "owner manages settings" on public.app_settings for all to authenticated using (true) with check (true);
+```
+
+**Already created the table or policies from a tutorial?** The SQL above
+detects a tutorial-style `cars` table and replaces it, and it replaces any
+"everyone can write" policies on purpose: with public insert/update/delete,
+**anyone on the internet could delete your cars**. After running it, only
+your owner account (step 4) can change the inventory — visitors just read it.
+
+## Everyday use (the owner's workflow)
+
+1. Open your website → **Owner Login** → type the dashboard passcode.
+2. Add or edit cars — up to 6 photos each. Every save is pushed to the
+   cloud automatically (you'll see the pill flash **Syncing…** then **Live**).
+3. Visitors see your changes as soon as they open or refresh the page.
+
+### The cloud button (top of the dashboard)
+
+| What you see | What it means |
+|---|---|
+| 🟢 **Live** | Connected and signed in — saves sync automatically |
+| 🟡 **Not signed in** | The file is configured, but you need to sign in (click it, enter your Supabase email + password) |
+| ⚪ **Local only** | `index.html` has no Supabase URL/key pasted in yet — see setup step 6 |
+| Orange **Not synced** badge | You made changes but the cloud could not be reached (offline?). Your changes are safe on this device — click the cloud button → **Sync now** when back online |
+
+Clicking the cloud button always opens the cloud settings, where you can
+sign in, change your owner email/password, use **Sync now**, and set the
+**dashboard address** (see the PHP section below).
+
+### Is the key in the file safe?
+Yes — it is **public on purpose**. Visitors' browsers need it to *read* your
+inventory, and reading is all it allows. *Writing* requires your owner
+account (email + password), which is stored only in your browser and never
+appears in the file.
+
+## Changing the dashboard passcode
 Open `index.html` in any text editor and find the line
 `var CM_PASSCODE = 'admin123#';` near the bottom. Change the text between the
 quotes, save, commit + push.
 
-## About the password's limits (important)
+## About the passcode's limits (important)
 This one-file site is hosted on GitHub Pages, which cannot run server code.
-That means the dashboard password lives in the page — a technical visitor
+That means the dashboard passcode lives in the page — a technical visitor
 could find it in the page source. It keeps casual visitors out, nothing more.
+Your inventory itself is safe: nobody can change the cars in the cloud
+without your Supabase owner account.
+
 For a password that never touches the browser, use the separate PHP package
-(`admin.php` + `logout.php` on PHP hosting): after you set it up and publish
-once with its "Dashboard address" filled in, the website's Owner Login
+(`admin.php` + `logout.php` on PHP hosting). It shares the same Supabase
+cloud. Once it is online, put its address in the dashboard's cloud settings
+(**Dashboard address**) — after your next save, the website's Owner Login
 button automatically sends you there instead.
 
 ## Seeing a 404? Check these in order
@@ -61,3 +168,10 @@ button automatically sends you there instead.
 3. GitHub Pages must be on (Settings → Pages → Branch: main, Folder: /root).
 4. The repo must be public on a free plan.
 5. Check the URL matches your username and repo name exactly.
+
+## Cars not updating for visitors? Check these
+1. The cloud button must be green (**Live**) when you save.
+2. `index.html` on GitHub must contain your Supabase URL + anon key
+   (setup step 6) — if you forgot to push, visitors read nothing.
+3. Visitors must refresh the page (changes appear on reload, not live-push).
+4. If the badge says **Not synced**, click the cloud button → **Sync now**.
