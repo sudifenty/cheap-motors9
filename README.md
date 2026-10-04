@@ -123,6 +123,9 @@ your owner account (step 4) can change the inventory — visitors just read it.
 1. Open your website → **Owner Login** → type the dashboard passcode.
 2. Add or edit cars — up to 6 photos each. Every save is pushed to the
    cloud automatically (you'll see the pill flash **Syncing…** then **Live**).
+   On a new device or website address, the cloud sign-in form opens **by
+   itself** the first time you enter the dashboard — sign in once there and
+   every save syncs from then on.
 3. Visitors see your changes as soon as they open or refresh the page.
 
 ### The cloud button (top of the dashboard)
@@ -130,7 +133,7 @@ your owner account (step 4) can change the inventory — visitors just read it.
 | What you see | What it means |
 |---|---|
 | 🟢 **Live** | Connected and signed in — saves sync automatically |
-| 🟡 **Not signed in** | The file is configured, but you need to sign in (click it, enter your Supabase email + password) |
+| 🟡 **Not signed in** | The file is configured, but you need to sign in (click it, enter your Supabase email + password). **Each website address keeps its own sign-in** — if you start working from a new address (your own domain, a different device), sign in once there |
 | ⚪ **Local only** | `index.html` has no Supabase URL/key pasted in yet — see setup step 6 |
 | Orange **Not synced** badge | You made changes but the cloud could not be reached (offline?). Your changes are safe on this device — click the cloud button → **Sync now** when back online |
 
