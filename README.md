@@ -27,6 +27,10 @@ browser (≤900px JPEG, about 100–280 KB each, up to 6 per car).
 - After updating to this version, the **first sync automatically
   re-compresses older, oversized photos** — the website gets lighter and
   the offline copy fits on the device again.
+- **Visitors never see the demo cars.** While the real inventory loads,
+  a visitor's browser shows its cached copy of your last published cars —
+  or a tidy loading state on the very first visit. The built-in demo cars
+  only appear when the file is NOT connected to a cloud project.
 
 ## Put it online with GitHub Desktop (step by step)
 
