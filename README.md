@@ -110,6 +110,18 @@ create policy "settings readable by everyone" on public.app_settings for select 
 -- …but only YOU (signed in with your owner account) may change anything.
 create policy "owner manages cars"     on public.cars         for all to authenticated using (true) with check (true);
 create policy "owner manages settings" on public.app_settings for all to authenticated using (true) with check (true);
+
+-- Live updates: visitors' open tabs refresh themselves when you publish a
+-- change (no reload needed anywhere).
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'cars') then
+    execute 'alter publication supabase_realtime add table public.cars';
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'app_settings') then
+    execute 'alter publication supabase_realtime add table public.app_settings';
+  end if;
+end $$;
 ```
 
 **Already created the table or policies from a tutorial?** The SQL above
@@ -126,7 +138,7 @@ your owner account (step 4) can change the inventory — visitors just read it.
    On a new device or website address, the cloud sign-in form opens **by
    itself** the first time you enter the dashboard — sign in once there and
    every save syncs from then on.
-3. Visitors see your changes as soon as they open or refresh the page.
+3. Updates are instant everywhere: your website view changes the moment you save, and any open tab — yours or a visitor's — updates itself (instantly once the Realtime lines in the setup SQL have run; otherwise within about half a minute). A “✅ Car published live!” toast confirms every successful sync.
 
 ### The cloud button (top of the dashboard)
 
@@ -176,5 +188,5 @@ button automatically sends you there instead.
 1. The cloud button must be green (**Live**) when you save.
 2. `index.html` on GitHub must contain your Supabase URL + anon key
    (setup step 6) — if you forgot to push, visitors read nothing.
-3. Visitors must refresh the page (changes appear on reload, not live-push).
+3. Open tabs update on their own — instantly with the Realtime SQL from the setup section, otherwise within ~30 seconds. A manual refresh always works too.
 4. If the badge says **Not synced**, click the cloud button → **Sync now**.
