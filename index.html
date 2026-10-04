@@ -2425,6 +2425,15 @@
       }
       refreshCloudPill();
 
+      /* Entering the dashboard while the cloud is not set up on THIS address:
+         open the sign-in form right away, so saves can never end up
+         device-only without the owner noticing. */
+      window.cmCloudCheck = function () {
+        var c = storedCreds();
+        if (sbConfigured() && !sbValidSession() && !c.email) openSbModal();
+      };
+      window.cmCloseCloud = closeSbModal;
+
       /* Shared inventory: adopt what Supabase holds (or the old cars.json)
          unless this browser has unsynced local changes. */
       (function loadRemoteInventory() {
@@ -2511,6 +2520,7 @@
       function showSite() {
         adminView.hidden = true;
         siteView.hidden = false;
+        if (window.cmCloseCloud) window.cmCloseCloud();   // never leave the sign-in dialog open over the site
         if (window.loadCars) window.loadCars();   // refresh cars/prices after dashboard changes
         window.scrollTo(0, 0);
       }
@@ -2526,7 +2536,7 @@
 
       gateForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); }
+        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); if (window.cmCloudCheck) window.cmCloudCheck(); }
         else { gateError.hidden = false; gateInput.value = ''; gateInput.focus(); }
       });
       document.getElementById('gateCancel').addEventListener('click', closeGate);
