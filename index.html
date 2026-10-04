@@ -720,12 +720,11 @@
         </span>
       </div>
 
-      <span id="unpubBadge" class="badge" style="background:rgba(255,140,66,.15);color:#FF8C42;border:1px solid rgba(255,140,66,.4)" hidden title="You have changes that are not live on the website yet — click Publish to Website">Unpublished</span>
-      <button type="button" id="publishBtn" class="btn-warn" title="Make your current inventory visible to everyone on the website">
-        <svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-        Publish to Website
+      <span id="unpubBadge" class="badge" style="background:rgba(255,140,66,.15);color:#FF8C42;border:1px solid rgba(255,140,66,.4)" hidden title="You have changes that are not synced to the live website yet">Not synced</span>
+      <button type="button" id="cloudStatus" class="btn-ghost" title="Cloud connection — click for settings">
+        <span id="cloudDot" style="width:.55rem;height:.55rem;border-radius:9999px;background:#777;flex:none"></span>
+        <span id="cloudLabel">Local only</span>
       </button>
-      <button type="button" id="pubSettings" class="btn-ghost" title="Publish settings: repository, token, manual download" aria-label="Publish settings">&#9881;</button>
 
       <div class="cur-wrap">
         <label class="cur-label" for="currencySel">Currency</label>
@@ -838,7 +837,7 @@
 
   <footer class="border-t border-[#262626]">
     <div class="mx-auto max-w-6xl px-4 py-6 text-center text-xs text-[#666] sm:px-6">
-      Owner dashboard — data is stored locally in this browser (localStorage key: <span class="text-[#FF8C42]">cheapMotors</span>). Nothing leaves this device.
+      Owner dashboard — cars are saved in this browser and, when the cloud is connected, synced to Supabase so every visitor sees them.
     </div>
   </footer>
   </div>
@@ -900,38 +899,38 @@
     </div>
   </div>
 
-  <!-- ========================= PUBLISH DIALOG ========================== -->
-  <div id="pubModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pubModalTitle">
+  <!-- ====================== CLOUD SETTINGS DIALOG ====================== -->
+  <div id="sbModal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="sbModalTitle">
     <div class="modal-card">
       <div class="modal-head">
         <div class="modal-title-wrap">
-          <h2 id="pubModalTitle" class="text-lg font-bold text-white">Publish to your website</h2>
+          <h2 id="sbModalTitle" class="text-lg font-bold text-white">Cloud connection (Supabase)</h2>
         </div>
-        <button type="button" id="pubCloseX" class="modal-x" aria-label="Close" title="Close">&times;</button>
+        <button type="button" id="sbCloseX" class="modal-x" aria-label="Close" title="Close">&times;</button>
       </div>
 
-      <form id="pubForm" novalidate>
-        <p class="upload-sub" style="margin:0 0 .9rem">Visitors only see your cars after you publish. Publishing saves <b>cars.json</b> into your GitHub repository — the live website picks it up in about 5&ndash;10&nbsp;minutes.</p>
+      <form id="sbForm" novalidate>
+        <p id="sb_filecfg" class="upload-sub" style="margin:0 0 .9rem"></p>
+        <p class="upload-sub" style="margin:0 0 .9rem">While connected, every car you add or change is saved to your Supabase project — visitors see it as soon as they open or refresh the website. Signing in needs your owner account (Supabase &rarr; Authentication &rarr; Users). Email and password are stored only in this browser.</p>
         <div class="modal-grid">
-          <label class="modal-field span2">
-            <span class="modal-label">GitHub repository</span>
-            <input id="pub_repo" class="inp" type="text" placeholder="your-username/your-repo" autocomplete="off">
+          <label class="modal-field">
+            <span class="modal-label">Owner email</span>
+            <input id="sb_email" class="inp" type="email" placeholder="you@example.com" autocomplete="off">
+          </label>
+          <label class="modal-field">
+            <span class="modal-label">Password</span>
+            <input id="sb_password" class="inp" type="password" placeholder="Your Supabase owner password" autocomplete="off">
           </label>
           <label class="modal-field span2">
             <span class="modal-label">Dashboard address (optional)</span>
-            <input id="pub_dash" class="inp" type="text" placeholder="https://your-php-host.com/admin.php" autocomplete="off">
-            <span class="upload-sub">If your dashboard (admin.php) is on PHP hosting, paste its full address — the "Owner Login" button on the website will point there after your next publish. Leave empty while you still use admin.html.</span>
-          </label>
-          <label class="modal-field span2">
-            <span class="modal-label">GitHub token (needed once)</span>
-            <input id="pub_token" class="inp" type="password" placeholder="Paste your fine-grained token here" autocomplete="off">
-            <span class="upload-sub">Create it once on github.com: <b>Settings &rarr; Developer settings &rarr; Fine-grained tokens &rarr; Generate new token</b>. Under "Repository access" choose <b>Only select repositories</b> and pick this repository. Under "Repository permissions" set <b>Contents: Read and write</b>. It is stored only in this browser and never shown on the website.</span>
+            <input id="sb_dash" class="inp" type="text" placeholder="https://your-php-host.com/admin.php" autocomplete="off">
+            <span class="upload-sub">If you also use the password-protected PHP dashboard, put its address here — the website's Owner Login button will send you there.</span>
           </label>
         </div>
         <div class="modal-actions">
-          <a id="pubDownload" href="#" class="btn-ghost" title="No token? Download the file and add it to your repository manually">Download cars.json (manual)</a>
-          <button type="button" id="pubCancel" class="btn-ghost">Cancel</button>
-          <button type="submit" class="btn-warn">Save &amp; Publish</button>
+          <button type="button" id="sbCancel" class="btn-ghost">Cancel</button>
+          <button type="button" id="sbSyncNow" class="btn-ghost" title="Push your current inventory to Supabase now">Sync now</button>
+          <button type="submit" class="btn-warn">Save &amp; Sign In</button>
         </div>
       </form>
     </div>
@@ -962,6 +961,175 @@
   </div>
 
   <script>
+
+    /* ======================================================================
+       SUPABASE CONNECTION — shared by the website and the dashboard
+       ------------------------------------------------------------------------
+       These two values are PUBLIC on purpose: visitors need them to READ
+       your inventory, and this key only allows reading — writing needs
+       your owner account (entered in the dashboard, never stored in this
+       file). Setup (full guide in README.md):
+         1. Create a free project at https://supabase.com
+         2. SQL Editor: run the setup SQL from README.md
+         3. Authentication → Users → Add user (your email + password)
+         4. Project Settings → API: paste the URL and the "publishable"
+            (or "anon public") key below, save the file, commit + push.
+       Leave both empty to run without Supabase (this browser's data only).
+       ====================================================================== */
+    var SUPABASE_URL = 'https://araestfegjfgbpiuqiay.supabase.co';
+    var SUPABASE_ANON_KEY = 'sb_publishable_y_jcJfz8cP3hUP794i8dtQ_9XPbgnAt';   // publishable / "anon public" key — public by design
+
+    var SB_SESSION_KEY = 'cheapMotorsSbSession';
+    var SB_EMAIL_KEY = 'cheapMotorsSbEmail';
+    var SB_PASS_KEY = 'cheapMotorsSbPassword';
+    var SB_DASH_KEY = 'cheapMotorsDashboardUrl';
+
+    function sbConfigured() { return !!(SUPABASE_URL && SUPABASE_ANON_KEY); }
+    function sbLSget(k) { try { return localStorage.getItem(k); } catch (err) { return null; } }
+    function sbLSset(k, v) { try { localStorage.setItem(k, v); } catch (err) {} }
+    function sbLSdel(k) { try { localStorage.removeItem(k); } catch (err) {} }
+    function sbAnonHeaders() {
+      return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+    }
+
+    /* Public read (no owner account needed) — used by the customer website
+       and by the dashboard when it loads the shared inventory. */
+    function sbPublicRead() {
+      function j(r) { return r.ok ? r.json() : Promise.resolve(null); }
+      return Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/cars?select=data&order=pos.asc', { headers: sbAnonHeaders() }).then(j),
+        fetch(SUPABASE_URL + '/rest/v1/app_settings?select=key,value', { headers: sbAnonHeaders() }).then(j)
+      ]).then(function (res) {
+        var rows = res[0], kv = res[1] || [];
+        if (!rows || !rows.length) return null;             // nothing shared yet
+        var settings = {};
+        kv.forEach(function (r) { settings[r.key] = r.value; });
+        return { cars: rows.map(function (r) { return r.data; }), settings: settings };
+      });
+    }
+
+    /* Owner session (dashboard only) ---------------------------------------- */
+    function sbGetSession() {
+      try {
+        var s = JSON.parse(sbLSget(SB_SESSION_KEY) || 'null');
+        return (s && s.access_token && s.refresh_token) ? s : null;
+      } catch (err) { return null; }
+    }
+    function sbValidSession() {
+      var s = sbGetSession();
+      return (s && s.expires_at > Date.now()) ? s : null;
+    }
+    function sbStoreSession(j) {
+      sbLSset(SB_SESSION_KEY, JSON.stringify({
+        access_token: j.access_token, refresh_token: j.refresh_token,
+        expires_at: Date.now() + ((j.expires_in || 3600) - 60) * 1000
+      }));
+    }
+    function sbSignIn(email, password) {
+      return fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error((j && (j.msg || j.error_description || j.message)) || ('HTTP ' + r.status));
+          sbStoreSession(j);
+          return j;
+        });
+      });
+    }
+    function sbRefresh() {
+      var s = sbGetSession();
+      if (!s) return Promise.reject(new Error('no session'));
+      return fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: s.refresh_token })
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) { sbLSdel(SB_SESSION_KEY); throw new Error('session expired'); }
+          sbStoreSession(j);
+          return j;
+        });
+      });
+    }
+    /* Signed-in REST call; refreshes the token once if it is rejected. */
+    function sbAuthedFetch(url, opts) {
+      var s = sbValidSession();
+      if (!s) return Promise.reject(new Error('not signed in'));
+      opts = opts || {};
+      opts.headers = Object.assign(
+        { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + s.access_token },
+        opts.headers || {}
+      );
+      return fetch(url, opts).then(function (r) {
+        if (r.status !== 401) return r;
+        return sbRefresh().then(function (ns) {
+          opts.headers['Authorization'] = 'Bearer ' + ns.access_token;
+          return fetch(url, opts);
+        });
+      });
+    }
+
+    /* Push the inventory to Supabase. Only changed/new cars are uploaded and
+       cars removed here are deleted there, so a normal save is one small
+       request even with a big inventory. */
+    function sbSyncInventory(carsArr, currency, dashboard, prevMap) {
+      prevMap = prevMap || {};
+      var changed = [];
+      carsArr.forEach(function (c, idx) {
+        var cs = JSON.stringify(c);
+        if (prevMap[c.id] === cs) return;
+        changed.push({ id: String(c.id), pos: idx, data: c, updated_at: new Date().toISOString() });
+        prevMap[c.id] = cs;
+      });
+      var localIds = carsArr.map(function (c) { return String(c.id); });
+
+      return fetch(SUPABASE_URL + '/rest/v1/cars?select=id', { headers: sbAnonHeaders() })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (rows) {
+          var remoteIds = rows.map(function (r2) { return String(r2.id); });
+          var gone = remoteIds.filter(function (id) { return localIds.indexOf(id) === -1; });
+          var chain = Promise.resolve();
+          if (gone.length) {
+            chain = chain.then(function () {
+              return sbAuthedFetch(SUPABASE_URL + '/rest/v1/cars?id=in.(' + gone.map(encodeURIComponent).join(',') + ')', { method: 'DELETE' })
+                .then(function (r3) { if (!r3.ok && r3.status !== 204) throw new Error('delete HTTP ' + r3.status); });
+            });
+          }
+          var batches = [[]], bytes = 0;                  // ~2 MB per request
+          changed.forEach(function (row) {
+            var sz = JSON.stringify(row).length;
+            var last = batches[batches.length - 1];
+            if (last.length && bytes + sz > 2000000) { batches.push([]); bytes = 0; }
+            batches[batches.length - 1].push(row); bytes += sz;
+          });
+          batches.forEach(function (batch) {
+            if (!batch.length) return;
+            chain = chain.then(function () {
+              return sbAuthedFetch(SUPABASE_URL + '/rest/v1/cars', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                body: JSON.stringify(batch)
+              }).then(function (r4) {
+                if (r4.status !== 200 && r4.status !== 201) throw new Error('upload HTTP ' + r4.status);
+              });
+            });
+          });
+          return chain;
+        })
+        .then(function () {
+          return sbAuthedFetch(SUPABASE_URL + '/rest/v1/app_settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify([{ key: 'currency', value: currency || 'UGX' }, { key: 'dashboard', value: dashboard || '' }])
+          }).then(function (r5) {
+            if (r5.status !== 200 && r5.status !== 201) throw new Error('settings HTTP ' + r5.status);
+          });
+        })
+        .then(function () { return prevMap; });
+    }
+
     (function () {
       'use strict';
 
@@ -1345,27 +1513,49 @@
 
       loadCars();
 
-      /* Fetch the shared inventory (cars.json) published by the dashboard.
-         Until it exists — or if it cannot be loaded (e.g. opened as a local
-         file) — this browser's own storage is used, exactly as before. */
-      try {
-        if (typeof fetch === 'function') {
+      /* Shared inventory. Supabase first — live data, instantly visible to
+         every visitor. The old cars.json file and then this browser's own
+         storage are fallbacks (not set up / offline / opened as a file). */
+      function adoptShared(obj) {
+        if (!obj) return false;
+        var arr = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.cars) ? obj.cars : null);
+        if (!arr || !arr.length) return false;
+        remoteCars = arr.filter(function (c) { return c && typeof c === 'object'; });
+        if (obj.currency) remoteCur = String(obj.currency);
+        loadCars();                                // re-render with the shared data
+        return true;
+      }
+      function legacyShared() {                    // old cars.json (GitHub) fallback
+        try {
           fetch('cars.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-cache' })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (obj) {
               if (!obj) return;
-              /* If the owner has moved the dashboard to PHP hosting, the
-                 "Owner Login" button goes there instead of the built-in one. */
               if (obj.dashboard && window.cmSetExternalDashboard) {
                 window.cmSetExternalDashboard(String(obj.dashboard));
               }
-              var arr = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.cars) ? obj.cars : null);
-              if (!arr || !arr.length) return;
-              remoteCars = arr.filter(function (c) { return c && typeof c === 'object'; });
-              if (obj.currency) remoteCur = String(obj.currency);
-              loadCars();                          // re-render with the shared data
+              adoptShared(obj);
             })
-            .catch(function () { /* offline or not published yet — local data is fine */ });
+            .catch(function () { /* offline or not published — local data is fine */ });
+        } catch (err) {}
+      }
+      try {
+        if (typeof fetch === 'function') {
+          if (sbConfigured()) {
+            sbPublicRead()
+              .then(function (res) {
+                if (!res) { legacyShared(); return; }
+                /* If the owner uses the password-protected PHP dashboard,
+                   Owner Login goes there instead of the built-in one. */
+                if (res.settings.dashboard && window.cmSetExternalDashboard) {
+                  window.cmSetExternalDashboard(String(res.settings.dashboard));
+                }
+                if (!adoptShared({ cars: res.cars, currency: res.settings.currency })) legacyShared();
+              })
+              .catch(function () { legacyShared(); });
+          } else {
+            legacyShared();
+          }
         }
       } catch (err) { /* local file or very old browser — local data is fine */ }
     })();
@@ -1391,12 +1581,10 @@
 
       var STORE_KEY = 'cheapMotors';
 
-      /* Publishing: the live website reads cars.json from the GitHub
-         repository. These keys hold the owner's publish settings — they live
-         in THIS browser only and are never published to the website. */
-      var GH_TOKEN_KEY = 'cheapMotorsGithubToken';
-      var GH_REPO_KEY = 'cheapMotorsGithubRepo';
-      var GH_DASH_KEY = 'cheapMotorsDashboardUrl';     // public address of admin.php (PHP hosting)
+      /* Cloud sync: the owner's Supabase account lives in THIS browser only
+         (email + password, entered in the cloud settings) and is never part
+         of the website files. The public connection values live in the
+         SUPABASE CONNECTION block at the top of the script. */
       var DIRTY_KEY = 'cheapMotorsUnpublished';
 
       /* ---- localStorage with a safe in-memory fallback ----------------
@@ -1569,8 +1757,9 @@
           render();
           return;
         }
-        markDirty();                               // there are changes that are not live yet
+        markDirty();                               // not synced to the cloud yet
         render();
+        queueSync();                               // push to Supabase when connected
       }
 
       /* ---- Page elements ------------------------------------------------- */
@@ -2078,18 +2267,21 @@
         });
       }
 
-      /* ---- Publish to the live website --------------------------------------
-         The website fetches cars.json from the GitHub repository. "Publish
-         to Website" writes the current inventory (cars, photos, currency)
-         to that file through the GitHub API. The token is a fine-grained
-         personal access token stored ONLY in this browser. */
-      var pubBtn = document.getElementById('publishBtn');
-      var pubSettingsBtn = document.getElementById('pubSettings');
-      var pubModal = document.getElementById('pubModal');
-      var pubRepo = document.getElementById('pub_repo');
-      var pubToken = document.getElementById('pub_token');
-      var pubDash = document.getElementById('pub_dash');
+      /* ---- Cloud sync (Supabase) --------------------------------------------
+         When connected, every save is pushed to your Supabase project, so
+         visitors see your changes immediately. No publish button, no tokens.
+         Without a connection the dashboard keeps working locally. */
+      var cloudDot = document.getElementById('cloudDot');
+      var cloudLabel = document.getElementById('cloudLabel');
+      var sbModal = document.getElementById('sbModal');
+      var sbEmail = document.getElementById('sb_email');
+      var sbPassword = document.getElementById('sb_password');
+      var sbDash = document.getElementById('sb_dash');
+      var sbFileCfg = document.getElementById('sb_filecfg');
       var unpubBadge = document.getElementById('unpubBadge');
+
+      var lastSyncedMap = {};                       // car id -> JSON at last successful sync
+      var syncBusy = false, syncPending = false;
 
       function markDirty() {
         try { storage.setItem(DIRTY_KEY, '1'); } catch (err) {}
@@ -2103,172 +2295,179 @@
         try { if (storage.getItem(DIRTY_KEY) === '1') unpubBadge.hidden = false; } catch (err) {}
       }
 
-      function githubRepo() {
-        var saved = '';
-        try { saved = storage.getItem(GH_REPO_KEY) || ''; } catch (err) {}
-        if (saved) return saved;
-        var m = location.hostname.match(/^([a-z0-9-]+)\.github\.io$/i);
-        if (!m) return '';                         // local file or custom domain
-        var seg = location.pathname.replace(/^\/+|\/+$/g, '').split('/')[0];
-        return seg ? m[1] + '/' + seg : m[1] + '/' + m[1] + '.github.io';
+      function storedCreds() {
+        var e = '', p = '';
+        try { e = storage.getItem(SB_EMAIL_KEY) || ''; } catch (err) {}
+        try { p = storage.getItem(SB_PASS_KEY) || ''; } catch (err) {}
+        return { email: e, password: p };
       }
 
-      function publishPayload() {
+      function refreshCloudPill() {
+        if (!sbConfigured()) {
+          if (cloudDot) cloudDot.style.background = '#777';
+          if (cloudLabel) cloudLabel.textContent = 'Local only';
+          return;
+        }
+        if (sbValidSession()) {
+          if (cloudDot) cloudDot.style.background = '#16a34a';
+          if (cloudLabel) cloudLabel.textContent = 'Live';
+        } else {
+          if (cloudDot) cloudDot.style.background = '#f5c542';
+          if (cloudLabel) cloudLabel.textContent = 'Not signed in';
+        }
+      }
+
+      function syncNow(manual) {
+        if (!sbConfigured()) { if (manual) openSbModal(); return; }
+        if (syncBusy) { syncPending = true; return; }
+        var c = storedCreds();
         var dash = '';
-        try { dash = storage.getItem(GH_DASH_KEY) || ''; } catch (err) {}
-        return { currency: currentCurrency().code, exportedAt: Date.now(), dashboard: dash, cars: cars };
-      }
-
-      function utf8b64(str) {                      // base64 of UTF-8 text
-        return btoa(unescape(encodeURIComponent(str)));
-      }
-
-      function api(url, opts) {
-        var token = '';
-        try { token = storage.getItem(GH_TOKEN_KEY) || ''; } catch (err) {}
-        var headers = { 'Accept': 'application/vnd.github+json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
-        return fetch(url, Object.assign({ headers: headers }, opts || {}));
-      }
-
-      function publishNow() {
-        var repo = githubRepo();
-        var token = '';
-        try { token = storage.getItem(GH_TOKEN_KEY) || ''; } catch (err) {}
-        if (!repo || !token) { openPubModal(); return; }
-        var label = pubBtn ? pubBtn.innerHTML : '';
-        if (pubBtn) { pubBtn.disabled = true; pubBtn.textContent = 'Publishing…'; }
-        toast('Publishing to ' + repo + ' …', 'info');
-        api('https://api.github.com/repos/' + repo + '/contents/cars.json')
-          .then(function (r) { return r.status === 200 ? r.json() : { sha: null }; })
-          .then(function (info) {
-            return api('https://api.github.com/repos/' + repo + '/contents/cars.json', {
-              method: 'PUT',
-              body: JSON.stringify({
-                message: 'Update inventory from the dashboard',
-                content: utf8b64(JSON.stringify(publishPayload())),
-                sha: info.sha || undefined
-              })
+        try { dash = storage.getItem(SB_DASH_KEY) || ''; } catch (err) {}
+        function go() {
+          syncBusy = true;
+          if (cloudLabel) cloudLabel.textContent = 'Syncing…';
+          sbSyncInventory(cars, currentCurrency().code, dash, lastSyncedMap)
+            .then(function (prevMap) {
+              lastSyncedMap = prevMap;
+              clearDirty();
+              syncBusy = false;
+              refreshCloudPill();
+              if (manual) toast('Synced — your changes are live for every visitor.', 'success');
+              if (syncPending) { syncPending = false; queueSync(); }
+            })
+            .catch(function (err) {
+              syncBusy = false;
+              refreshCloudPill();
+              toast('Could not reach Supabase — your changes are saved on this device only. Open the cloud settings and use "Sync now" when back online. (' + String(err && err.message || err) + ')', 'error');
             });
-          })
-          .then(function (r) {
-            if (r.status !== 200 && r.status !== 201) throw new Error('HTTP ' + r.status);
-            clearDirty();
-            closePubModal();
-            toast('Published! The website updates in about 5–10 minutes.', 'success');
-          })
-          .catch(function (err) {
-            var msg = String(err && err.message || err);
-            if (/HTTP 40(1|3)/.test(msg)) toast('GitHub rejected the token — check that it is valid and has "Contents: Read and write" permission on this repository.', 'error');
-            else if (/HTTP 404/.test(msg)) toast('Repository not found — check the name in publish settings (it should look like your-username/your-repo).', 'error');
-            else toast('Could not publish — check your internet connection and try again. (' + msg + ')', 'error');
-          })
-          .then(function () {
-            if (pubBtn) { pubBtn.disabled = false; pubBtn.innerHTML = label || 'Publish to Website'; }
-          });
+        }
+        if (sbValidSession()) { go(); return; }
+        if (!c.email || !c.password) { refreshCloudPill(); if (manual) openSbModal(); return; }
+        sbSignIn(c.email, c.password).then(go).catch(function (err) {
+          refreshCloudPill();
+          toast('Sign-in failed — check your email and password in the cloud settings. (' + String(err && err.message || err) + ')', 'error');
+          if (manual) openSbModal();
+        });
+      }
+      function queueSync() {
+        if (!sbConfigured()) return;                // local-only mode
+        var c = storedCreds();
+        if (!sbValidSession() && (!c.email || !c.password)) { refreshCloudPill(); return; }
+        if (syncBusy) { syncPending = true; return; }
+        syncNow(false);
       }
 
-      function openPubModal() {
-        if (!pubModal) return;
-        pubRepo.value = githubRepo() || '';
-        pubToken.value = '';
-        try { pubDash.value = storage.getItem(GH_DASH_KEY) || ''; } catch (err) {}
-        try {
-          pubToken.placeholder = storage.getItem(GH_TOKEN_KEY)
-            ? 'Token saved — paste a new one to change it'
-            : 'Paste your fine-grained token here';
-        } catch (err) {}
-        pubModal.hidden = false;
-        pubRepo.focus();
+      function openSbModal() {
+        if (!sbModal) return;
+        var c = storedCreds();
+        sbEmail.value = c.email;
+        sbPassword.value = '';
+        sbPassword.placeholder = c.password ? 'Password saved — enter a new one to change it' : 'Your Supabase owner password';
+        try { sbDash.value = storage.getItem(SB_DASH_KEY) || ''; } catch (err) {}
+        if (sbFileCfg) {
+          sbFileCfg.innerHTML = sbConfigured()
+            ? '<b style="color:#4ade80">Connected file.</b> This page reads from your project at ' + esc(SUPABASE_URL)
+            : '<b style="color:#f87171">Not configured yet:</b> open index.html in a text editor and paste your Supabase URL and anon key into the SUPABASE CONNECTION block near the top of the code (steps in README.md).';
+        }
+        sbModal.hidden = false;
+        sbEmail.focus();
       }
-      function closePubModal() { if (pubModal) pubModal.hidden = true; }
+      function closeSbModal() { if (sbModal) sbModal.hidden = true; }
 
-      if (pubBtn) pubBtn.addEventListener('click', publishNow);
-      if (pubSettingsBtn) pubSettingsBtn.addEventListener('click', openPubModal);
-      if (pubModal) {
-        document.getElementById('pubForm').addEventListener('submit', function (e) {
+      document.getElementById('cloudStatus').addEventListener('click', openSbModal);
+      if (sbModal) {
+        document.getElementById('sbForm').addEventListener('submit', function (e) {
           e.preventDefault();
-          var repo = pubRepo.value.trim().replace(/^https:\/\/github\.com\//i, '').replace(/\/+$/, '');
-          var token = pubToken.value.trim();
-          if (!/^[^\s\/]+\/[^\s\/]+$/.test(repo)) { alert('Please enter the repository like this: your-username/your-repo'); pubRepo.focus(); return; }
-          try { storage.setItem(GH_REPO_KEY, repo); } catch (err) {}
-          if (token) { try { storage.setItem(GH_TOKEN_KEY, token); } catch (err) {} }
-          var dash = pubDash.value.trim();
-          if (dash && !/^https?:\/\//i.test(dash)) { alert('The dashboard address must start with http:// or https://'); pubDash.focus(); return; }
-          try { storage.setItem(GH_DASH_KEY, dash); } catch (err) {}
-          publishNow();
-        });
-        document.getElementById('pubCancel').addEventListener('click', closePubModal);
-        document.getElementById('pubCloseX').addEventListener('click', closePubModal);
-        pubModal.addEventListener('click', function (e) { if (e.target === pubModal) closePubModal(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !pubModal.hidden) closePubModal(); });
-        var pubDownload = document.getElementById('pubDownload');
-        if (pubDownload) pubDownload.addEventListener('click', function () {
-          try {
-            var blob = new Blob([JSON.stringify(publishPayload())], { type: 'application/json' });
-            if (typeof URL.createObjectURL === 'function') this.href = URL.createObjectURL(blob);
-            toast('Downloaded cars.json — copy it into your repository folder (replacing the old one), then commit and push in GitHub Desktop.', 'info');
-          } catch (err) {
-            alert('Could not create the download: ' + err.message);
+          var email = sbEmail.value.trim();
+          var password = sbPassword.value;
+          var dash = sbDash.value.trim();
+          if (dash && !/^https?:\/\//i.test(dash)) { alert('The dashboard address must start with http:// or https://'); sbDash.focus(); return; }
+          try { storage.setItem(SB_DASH_KEY, dash); } catch (err) {}
+          var savedPass = storedCreds().password;
+          if (!email && !password && !savedPass) {
+            closeSbModal();
+            toast('Dashboard address saved. Visitors see it after your next sync.', 'info');
+            return;
           }
+          if (!email) { alert('Please enter your owner email.'); sbEmail.focus(); return; }
+          if (!password && !savedPass) { alert('Please enter your owner password.'); sbPassword.focus(); return; }
+          sbLSdel(SB_SESSION_KEY);
+          try {
+            storage.setItem(SB_EMAIL_KEY, email);
+            if (password) storage.setItem(SB_PASS_KEY, password);
+          } catch (err) {}
+          toast('Signing in…', 'info');
+          sbSignIn(email, password || savedPass)
+            .then(function () {
+              refreshCloudPill();
+              closeSbModal();
+              syncNow(true);                        // push everything right away
+            })
+            .catch(function (err) {
+              refreshCloudPill();
+              toast('Sign-in failed — check the email and password (they come from Supabase → Authentication → Users). (' + String(err && err.message || err) + ')', 'error');
+            });
         });
+        document.getElementById('sbSyncNow').addEventListener('click', function () { syncNow(true); });
+        document.getElementById('sbCancel').addEventListener('click', closeSbModal);
+        document.getElementById('sbCloseX').addEventListener('click', closeSbModal);
+        sbModal.addEventListener('click', function (e) { if (e.target === sbModal) closeSbModal(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !sbModal.hidden) closeSbModal(); });
       }
+      refreshCloudPill();
 
-      /* Shared inventory: pull the published cars.json (if any) and adopt it,
-         unless this browser has unpublished local changes. */
-      /* The public website's address, worked out from the repository saved in
-         publish settings (e.g. "user/cheap-motors" -> user.github.io/cheap-motors/).
-         Returns an empty string until the repository has been configured. */
-      function ghPagesBase() {
-        var repo = '';
-        try { repo = storage.getItem(GH_REPO_KEY) || ''; } catch (err) {}
-        var m = repo.match(/^([^\s\/]+)\/([^\s\/]+)$/);
-        if (!m) return '';
-        if (m[2].toLowerCase() === m[1].toLowerCase() + '.github.io') return 'https://' + m[1] + '.github.io/';
-        return 'https://' + m[1] + '.github.io/' + m[2] + '/';
-      }
-
-      /* When the dashboard is hosted away from the live website (for example
-         next to admin.php on PHP hosting), "Back to Website" should lead to
-         the real website, not to a stale local copy. */
-      (function fixSiteLink() {
-        var base = ghPagesBase();
-        if (!base) return;
-        var link = document.querySelector('a[href="index.html"]');
-        if (link) link.href = base;
-      })();
-
+      /* Shared inventory: adopt what Supabase holds (or the old cars.json)
+         unless this browser has unsynced local changes. */
       (function loadRemoteInventory() {
         if (typeof fetch !== 'function') return;
-        var t = Math.floor(Date.now() / 600000);
-        function adopt(obj) {
-          if (!obj) return false;
-          var arr = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.cars) ? obj.cars : null);
+        function adopt(arr, currency) {
           if (!arr || !arr.length) return false;
           var dirty = false;
           try { dirty = storage.getItem(DIRTY_KEY) === '1'; } catch (err) {}
           if (dirty) {
-            toast('This device has unpublished changes — they were kept. Click Publish to Website when ready.', 'info');
-            return true;                        // data found — no need to try further
+            toast('This device has unsynced changes — they were kept. Use "Sync now" in the cloud settings when ready.', 'info');
+            return true;
           }
           cars = arr.filter(function (c) { return c && typeof c === 'object'; });
           try { storage.setItem(STORE_KEY, JSON.stringify(cars)); } catch (err) {}
+          if (currency) {
+            try { storage.setItem(CUR_KEY, currency); } catch (err) {}
+            var csEl = document.getElementById('currencySel');
+            if (csEl) csEl.value = currentCurrency().code;
+          }
+          var map = {};
+          cars.forEach(function (c) { map[String(c.id)] = JSON.stringify(c); });
+          lastSyncedMap = map;
           render();
+          if (typeof window.loadCars === 'function') window.loadCars();   // refresh the site view
           return true;
         }
-        function tryFetch(url, next) {
+        function legacy() {
           try {
-            fetch(url, { cache: 'no-cache' })
+            fetch('cars.json?t=' + Math.floor(Date.now() / 600000), { cache: 'no-cache' })
               .then(function (r) { return r.ok ? r.json() : null; })
-              .then(function (obj) { if (!adopt(obj) && next) next(); })
-              .catch(function () { if (next) next(); });
-          } catch (err) { if (next) next(); }
+              .then(function (obj) {
+                if (!obj) return;
+                var arr = Array.isArray(obj) ? obj : (obj && Array.isArray(obj.cars) ? obj.cars : null);
+                if (obj.dashboard) { try { storage.setItem(SB_DASH_KEY, obj.dashboard); } catch (err) {} }
+                adopt(arr, obj.currency);
+              })
+              .catch(function () {});
+          } catch (err) {}
         }
-        /* 1) cars.json next to this page — the normal case on GitHub Pages.
-           2) the live website saved in publish settings — used when this
-              dashboard is hosted somewhere else (e.g. PHP hosting). */
-        var remote = ghPagesBase();
-        tryFetch('cars.json?t=' + t, remote ? function () { tryFetch(remote + 'cars.json?t=' + t, null); } : null);
+        try {
+          if (sbConfigured()) {
+            sbPublicRead()
+              .then(function (res) {
+                if (!res) { legacy(); return; }
+                if (res.settings.dashboard) { try { storage.setItem(SB_DASH_KEY, res.settings.dashboard); } catch (err) {} }
+                if (!adopt(res.cars, res.settings.currency)) legacy();
+              })
+              .catch(function () { legacy(); });
+          } else {
+            legacy();
+          }
+        } catch (err) { legacy(); }
       })();
 
       /* Exposed for the browser console */
