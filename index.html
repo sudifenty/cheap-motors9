@@ -997,8 +997,8 @@
     function sbPublicRead() {
       function j(r) { return r.ok ? r.json() : Promise.resolve(null); }
       return Promise.all([
-        fetch(SUPABASE_URL + '/rest/v1/cars?select=data&order=pos.asc', { headers: sbAnonHeaders() }).then(j),
-        fetch(SUPABASE_URL + '/rest/v1/app_settings?select=key,value', { headers: sbAnonHeaders() }).then(j)
+        fetch(SUPABASE_URL + '/rest/v1/cars?select=data&order=pos.asc', { headers: sbAnonHeaders(), cache: 'no-cache' }).then(j),
+        fetch(SUPABASE_URL + '/rest/v1/app_settings?select=key,value', { headers: sbAnonHeaders(), cache: 'no-cache' }).then(j)
       ]).then(function (res) {
         var rows = res[0], kv = res[1] || [];
         if (!rows || !rows.length) return null;             // nothing shared yet
@@ -1085,7 +1085,7 @@
       });
       var localIds = carsArr.map(function (c) { return String(c.id); });
 
-      return fetch(SUPABASE_URL + '/rest/v1/cars?select=id', { headers: sbAnonHeaders() })
+      return fetch(SUPABASE_URL + '/rest/v1/cars?select=id', { headers: sbAnonHeaders(), cache: 'no-cache' })
         .then(function (r) { return r.ok ? r.json() : []; })
         .then(function (rows) {
           var remoteIds = rows.map(function (r2) { return String(r2.id); });
@@ -2349,10 +2349,19 @@
           if (manual) openSbModal();
         });
       }
+      var lastSyncWarnAt = 0;
       function queueSync() {
         if (!sbConfigured()) return;                // local-only mode
         var c = storedCreds();
-        if (!sbValidSession() && (!c.email || !c.password)) { refreshCloudPill(); return; }
+        if (!sbValidSession() && (!c.email || !c.password)) {
+          refreshCloudPill();
+          var now = Date.now();                     // loud, but not on every single save
+          if (now - lastSyncWarnAt > 8000) {
+            lastSyncWarnAt = now;
+            toast('Saved on this device only \u2014 visitors cannot see it yet. Click the cloud button at the top and sign in.', 'error');
+          }
+          return;
+        }
         if (syncBusy) { syncPending = true; return; }
         syncNow(false);
       }
