@@ -814,6 +814,8 @@
         </div>
         <div id="photoStrip" class="chip-strip" hidden></div>
 
+        <textarea id="n_desc" class="inp textarea" rows="3" style="margin-top:.9rem;display:block;width:100%" placeholder="Description (optional) — shown to customers in View Details" aria-label="Car description"></textarea>
+
         <button type="submit" class="btn-warn mt-4 w-full sm:w-auto">
           <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
           Add Car
@@ -1847,14 +1849,26 @@
         }
       })();
 
+      /* Storage-full notice — the cloud is the real home of the inventory
+         now, so a full device only means "no offline copy", never "save
+         failed". Explained once per sitting; wording follows cloud status. */
+      var storageFullWarned = false;
+      function warnStorageFull() {
+        if (storageFullWarned) return;
+        storageFullWarned = true;
+        var c = sbConfigured() ? storedCreds() : null;
+        if (c && (sbValidSession() || (c.email && c.password))) {
+          toast('Saved to the cloud — device storage is full, so the offline copy is paused. Visitors still see every update.', 'info');
+        } else {
+          toast('Device storage is full and the cloud is not connected — this change only lives in this tab. Sign in with the cloud button (top) to keep it safe.', 'error');
+        }
+      }
+
       function save() {
         try {
           storage.setItem(STORE_KEY, JSON.stringify(cars));
         } catch (err) {
-          /* Storage full or blocked — tell the owner instead of failing silently */
-          toast('Could not save — browser storage is full. Delete a car or use smaller photos.', 'error');
-          render();
-          return;
+          warnStorageFull();       /* cloud-first: keep saving + syncing below */
         }
         markDirty();                               // not synced to the cloud yet
         render();
@@ -2027,6 +2041,7 @@
         var milesInput = document.getElementById('n_miles');
         var priceInput = document.getElementById('n_price');
         var imageInput = document.getElementById('n_image');
+        var descInput = document.getElementById('n_desc');
 
         var name = nameInput.value.trim();
         var price = parseFloat(priceInput.value);
@@ -2049,7 +2064,7 @@
           miles: miles,
           price: Math.round(price),
           images: images,
-          description: '',
+          description: descInput ? descInput.value.trim() : '',
           status: 'available',
           sold: false,
           createdAt: Date.now()
@@ -2062,6 +2077,7 @@
         milesInput.value = '';
         priceInput.value = '';
         imageInput.value = '';
+        if (descInput) descInput.value = '';
         resetUpload();                                   // detach the uploaded photo too
         nameInput.focus();
 
@@ -2077,8 +2093,8 @@
 
       /* ---- Optional photo upload ------------------------------------------
          "Upload Photos" reads several image files at once (up to MAX_PHOTOS
-         per car), shrinks each to ≤900px JPEG — localStorage only holds
-         ~5 MB — and shows them as chips. The first photo becomes the car's
+         per car), shrinks each to a compact ≤900px JPEG (~100–280 KB per
+         photo) and shows them as chips. The first photo becomes the car's
          cover image. Uploads replace the "Image Link" field. */
       var MAX_PHOTOS = 6;
       var newImages = [];                                 // [{ src, name }]
@@ -2103,31 +2119,66 @@
         renderPhotoStrip();
       }
 
-      /* Shrinks a data-URL photo so it fits comfortably in localStorage.
-         Anything that can't be shrunk (tiny images, blocked canvas, SVGs)
-         is kept exactly as it is; unreadable files come back as null. */
-      function shrinkDataUrl(dataUrl, done) {
+      /* Shrinks a data-URL photo so it fits comfortably in localStorage and
+         in one Supabase upload. Encodes at <=900px JPEG; a busy photo that is
+         still large is retried at lower quality / size until it is under the
+         byte target. Anything that can't be shrunk (blocked canvas, SVGs) is
+         kept exactly as it is; unreadable files come back as null. */
+      function shrinkDataUrl(dataUrl, done, opts) {
+        opts = opts || {};
+        var MAXDIM = opts.maxDim || 900;                   // longest side, pixels
+        var TARGET = opts.target || 280000;                // bytes per photo
         var probe = document.createElement('canvas');
         if (!probe.getContext || !probe.getContext('2d')) { done(dataUrl); return; }
         var img = new Image();
         img.onload = function () {
           try {
-            var MAX = 900, KEEP = 320000;                  // small enough → keep as-is
-            if (img.width <= MAX && img.height <= MAX && dataUrl.length <= KEEP) { done(dataUrl); return; }
-            var scale = Math.min(1, MAX / img.width, MAX / img.height);
-            var c = document.createElement('canvas');
-            c.width = Math.max(1, Math.round(img.width * scale));
-            c.height = Math.max(1, Math.round(img.height * scale));
-            var ctx = c.getContext('2d');
-            ctx.fillStyle = '#fff';                        // transparency → white
-            ctx.fillRect(0, 0, c.width, c.height);
-            ctx.drawImage(img, 0, 0, c.width, c.height);
-            var out = c.toDataURL('image/jpeg', 0.82);
-            done(out && out.length < dataUrl.length ? out : dataUrl);
+            if (!img.width || !img.height || dataUrl.length <= TARGET) { done(dataUrl); return; }
+            var steps = [[MAXDIM, 0.82], [MAXDIM, 0.68], [Math.round(MAXDIM * 0.8), 0.6], [Math.round(MAXDIM * 0.65), 0.5]];
+            var best = null;
+            for (var s = 0; s < steps.length; s++) {
+              var dim = steps[s][0], quality = steps[s][1];
+              var scale = Math.min(1, dim / img.width, dim / img.height);
+              var c = document.createElement('canvas');
+              c.width = Math.max(1, Math.round(img.width * scale));
+              c.height = Math.max(1, Math.round(img.height * scale));
+              var ctx = c.getContext('2d');
+              ctx.fillStyle = '#fff';                      // transparency -> white
+              ctx.fillRect(0, 0, c.width, c.height);
+              ctx.drawImage(img, 0, 0, c.width, c.height);
+              var out = c.toDataURL('image/jpeg', quality);
+              if (out && (best === null || out.length < best.length)) best = out;
+              if (best !== null && best.length <= TARGET) break;
+            }
+            done(best && best.length < dataUrl.length ? best : dataUrl);
           } catch (err) { done(dataUrl); }
         };
         img.onerror = function () { done(null); };
         img.src = dataUrl;
+      }
+
+      /* Photo diet — photos saved before the smart shrinker existed (or on
+         another device) can still be several hundred KB each, which fills
+         the browser's ~5 MB storage and makes the website heavy for visitors
+         on mobile data. Before every sync, each data-URL photo over ~300 KB
+         is re-encoded once; the smaller copy replaces the big one on this
+         device AND in the cloud. Returns null when nothing needed shrinking. */
+      function dietCars(list) {
+        return new Promise(function (resolve) {
+          var pending = 0, any = false;
+          list.forEach(function (car) {
+            if (!car || !Array.isArray(car.images)) return;
+            car.images.forEach(function (src, ii) {
+              if (typeof src !== 'string' || src.slice(0, 5) !== 'data:' || src.length <= 300000) return;
+              pending++;
+              shrinkDataUrl(src, function (out) {
+                if (out && out.length < src.length - 2000) { car.images[ii] = out; any = true; }
+                if (--pending === 0) resolve(any ? list : null);
+              }, { maxDim: 900, target: 230000 });
+            });
+          });
+          if (!pending) resolve(null);
+        });
       }
 
       function handleUploadChange(e) {
@@ -2426,7 +2477,14 @@
         function go() {
           syncBusy = true;
           if (cloudLabel) cloudLabel.textContent = 'Syncing…';
-          sbSyncInventory(cars, currentCurrency().code, dash, lastSyncedMap)
+          dietCars(cars).then(function (slimmed) {   /* photo diet: shrink oversized photos once */
+            if (slimmed) {                           /* keep the slimmer copies on this device too */
+              try { storage.setItem(STORE_KEY, JSON.stringify(slimmed)); } catch (err) {}
+              render();
+              if (window.cmPushSiteCars) window.cmPushSiteCars(slimmed, currentCurrency().code);
+            }
+            return sbSyncInventory(cars, currentCurrency().code, dash, lastSyncedMap);
+          })
             .then(function (prevMap) {
               lastSyncedMap = prevMap;
               clearDirty();
@@ -2439,7 +2497,7 @@
             .catch(function (err) {
               syncBusy = false;
               refreshCloudPill();
-              toast('Could not reach Supabase — your changes are saved on this device only. Open the cloud settings and use "Sync now" when back online. (' + String(err && err.message || err) + ')', 'error');
+              toast('Could not reach Supabase — your changes are kept in this browser for now. Open the cloud settings and use "Sync now" when back online. (' + String(err && err.message || err) + ')', 'error');
             });
         }
         if (sbValidSession()) { go(); return; }
