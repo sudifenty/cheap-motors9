@@ -31,14 +31,15 @@ browser (≤760px JPEG, about 80–160 KB each, up to 6 per car).
 - After updating to this version, the **first sync automatically
   re-compresses older, oversized photos** — the website gets lighter and
   the offline copy fits on the device again.
-- **Your real cars are built into the file.** A compressed snapshot of the
-  actual stock (taken 4 Oct 2026 — Evoque, Landcruiser, Range Rover,
-  Harrier, Ractis, IST; photos ~25–50 KB each, 2 per car) is baked into
-  `index.html`. A brand-new visitor sees YOUR cars on the very first
-  paint — never sample cars — and the live cloud list (with the full
-  photo galleries) takes over as soon as it loads. Repeat visits paint
-  from the browser's cached copy instantly. Ask to refresh the baked-in
-  snapshot whenever the lineup changes a lot — it does not update itself.
+- **All your cars are built into the file.** A compressed snapshot of the
+  full stock (taken 6 Oct 2026 — all 14 cars: Evoque, Landcruiser, Mark X,
+  Harrier, GLE400d, Noah, Vanguard, Subaru and the rest; photos ~25–55 KB
+  each, 2 per car) is baked into `index.html`. A brand-new visitor sees
+  ALL your cars on the very first paint — never sample cars, never an
+  incomplete list — and the live cloud list (with the full photo
+  galleries) takes over as soon as it loads. Repeat visits paint from the
+  browser's cached copy instantly. Ask to refresh the baked-in snapshot
+  whenever the lineup changes a lot — it does not update itself.
 
 ## Put it online with GitHub Desktop (step by step)
 
