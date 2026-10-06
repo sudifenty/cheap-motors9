@@ -488,6 +488,10 @@
     .upload-meta{min-width:0;flex:1 1 0%}
     .upload-name{margin:0;font-size:.85rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .upload-sub{margin:.15rem 0 0;font-size:.72rem;color:#888}
+    .visit-hint{margin:.15rem 0 0;font-size:.72rem;color:#888}
+    .visit-row{display:flex;justify-content:space-between;gap:1rem;padding:.55rem 0;border-bottom:1px solid #232323;font-size:.85rem;color:#bbb}
+    .visit-row:last-child{border-bottom:0}
+    .visit-time{color:#777;white-space:nowrap}
     .upload-x{flex:none;width:1.9rem;height:1.9rem;border:1px solid #333;border-radius:.625rem;background:#242424;color:#aaa;font-size:1.1rem;line-height:1;cursor:pointer}
     .upload-x:hover{color:#f87171;border-color:rgba(248,113,113,.5)}
 
@@ -752,7 +756,7 @@
   <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
 
     <!-- ============================ STATS ============================ -->
-    <section aria-label="Inventory stats" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <section aria-label="Inventory stats" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
       <div id="statTotal" class="rounded-2xl border border-[#262626] bg-[#1a1a1a] p-5">
         <div class="flex items-center justify-between">
@@ -794,6 +798,27 @@
         </div>
         <div class="stat-value mt-3 text-3xl font-extrabold text-[#f87171]">0</div>
       </div>
+      <div id="statVisits" class="rounded-2xl border border-[#262626] bg-[#1a1a1a] p-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-widest text-[#777]">Website Visits</span>
+          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FF8C42]/10 text-[#FF8C42]">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+        </div>
+        <div class="stat-value mt-3 text-3xl font-extrabold text-[#FF8C42]">&mdash;</div>
+      </div>
+    </section>
+
+    <!-- ======================= LIVE VISITORS ========================= -->
+    <section id="visitsPanel" class="mt-8 rounded-2xl border border-[#262626] bg-[#1a1a1a] p-5" aria-label="Website visitors">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-bold text-white">Live visitors</h2>
+        <span id="visitsHead" class="text-xs text-[#777]">Loading&hellip;</span>
+      </div>
+      <ul id="visitsList" class="mt-3" aria-label="Recent visits"></ul>
+      <p id="visitsHint" class="visit-hint mt-2" style="display:none"></p>
     </section>
 
     <!-- ======================== ADD NEW CAR ========================= -->
@@ -1106,22 +1131,18 @@
                 .then(function (r3) { if (!r3.ok && r3.status !== 204) throw new Error('delete HTTP ' + r3.status); });
             });
           }
-          var batches = [[]], bytes = 0;                  // ~2 MB per request
+          /* One car per request: a single over-sized car can never block the
+             others, and the error message names the car that failed. */
           changed.forEach(function (row) {
-            var sz = JSON.stringify(row).length;
-            var last = batches[batches.length - 1];
-            if (last.length && bytes + sz > 2000000) { batches.push([]); bytes = 0; }
-            batches[batches.length - 1].push(row); bytes += sz;
-          });
-          batches.forEach(function (batch) {
-            if (!batch.length) return;
             chain = chain.then(function () {
               return sbAuthedFetch(SUPABASE_URL + '/rest/v1/cars', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-                body: JSON.stringify(batch)
+                body: JSON.stringify([row])
               }).then(function (r4) {
-                if (r4.status !== 200 && r4.status !== 201) throw new Error('upload HTTP ' + r4.status);
+                if (r4.status !== 200 && r4.status !== 201) {
+                  throw new Error('upload HTTP ' + r4.status + ' (' + ((row.data && row.data.name) || row.id) + ')');
+                }
               });
             });
           });
@@ -1720,6 +1741,39 @@
         }
       } catch (err) { cloudGaveUp(); /* very old browser */ }
 
+      /* ---- Visitor counting (shown in the owner's dashboard) -------------
+         Each person who opens the website is counted once per page load in
+         the owner's Supabase project: the time, the kind of device and where
+         they came from. No names or personal data, and the owner's own
+         signed-in browser is not counted. It is fire-and-forget, so it can
+         never slow the page down. Needs the "visits" table from README.md. */
+      try {
+        var sbOwnerHere = false;
+        try { sbOwnerHere = !!storage.getItem('cheapMotorsSbSession'); } catch (err2) {}
+        if (sbConfigured() && typeof fetch === 'function' && !sbOwnerHere) {
+          var cmVid = '';
+          try { cmVid = storage.getItem('cheapMotorsVisitorId') || ''; } catch (err2) {}
+          if (!cmVid) {
+            cmVid = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+            try { storage.setItem('cheapMotorsVisitorId', cmVid); } catch (err2) {}
+          }
+          var ua = navigator.userAgent || '';
+          var device = /iPad|Tablet/i.test(ua) ? 'Tablet'
+            : /Android/i.test(ua) ? 'Android phone'
+            : /iPhone|iPod/i.test(ua) ? 'iPhone'
+            : /Windows/i.test(ua) ? 'Windows PC'
+            : /Macintosh|Mac OS X/i.test(ua) ? 'Mac'
+            : 'Visitor';
+          var source = 'direct';
+          try { if (document.referrer) source = new URL(document.referrer).hostname.replace(/^www\./, ''); } catch (err2) {}
+          fetch(SUPABASE_URL + '/rest/v1/visits', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, sbAnonHeaders()),
+            body: JSON.stringify([{ vid: cmVid, device: device, source: String(source).slice(0, 80) }])
+          }).catch(function () {});                       /* fire and forget */
+        }
+      } catch (err) {}
+
       /* Live updates. When the dashboard on THIS page saves, it pushes the
          cars straight into this view — no refresh. For every other open
          tab (this device or any visitor), the page listens for Supabase
@@ -2217,7 +2271,7 @@
 
       /* ---- Optional photo upload ------------------------------------------
          "Upload Photos" reads several image files at once (up to MAX_PHOTOS
-         per car), shrinks each to a compact ≤900px JPEG (~100–280 KB per
+         per car), shrinks each to a compact ≤760px JPEG (~80–160 KB per
          photo) and shows them as chips. The first photo becomes the car's
          cover image. Uploads replace the "Image Link" field. */
       var MAX_PHOTOS = 6;
@@ -2244,14 +2298,14 @@
       }
 
       /* Shrinks a data-URL photo so it fits comfortably in localStorage and
-         in one Supabase upload. Encodes at <=900px JPEG; a busy photo that is
+         in one Supabase upload. Encodes at <=760px JPEG; a busy photo that is
          still large is retried at lower quality / size until it is under the
          byte target. Anything that can't be shrunk (blocked canvas, SVGs) is
          kept exactly as it is; unreadable files come back as null. */
       function shrinkDataUrl(dataUrl, done, opts) {
         opts = opts || {};
-        var MAXDIM = opts.maxDim || 900;                   // longest side, pixels
-        var TARGET = opts.target || 280000;                // bytes per photo
+        var MAXDIM = opts.maxDim || 760;                   // longest side, pixels
+        var TARGET = opts.target || 160000;                // bytes per photo
         var probe = document.createElement('canvas');
         if (!probe.getContext || !probe.getContext('2d')) { done(dataUrl); return; }
         var img = new Image();
@@ -2285,20 +2339,22 @@
          another device) can still be several hundred KB each, which fills
          the browser's ~5 MB storage and makes the website heavy for visitors
          on mobile data. Before every sync, each data-URL photo over ~300 KB
-         is re-encoded once; the smaller copy replaces the big one on this
-         device AND in the cloud. Returns null when nothing needed shrinking. */
+         is re-encoded once (to ≤640px, ~110 KB); the smaller copy replaces
+         the big one on this device AND in the cloud, so the visitor site
+         loads fast even with a big inventory. Returns null when nothing
+         needed shrinking. */
       function dietCars(list) {
         return new Promise(function (resolve) {
           var pending = 0, any = false;
           list.forEach(function (car) {
             if (!car || !Array.isArray(car.images)) return;
             car.images.forEach(function (src, ii) {
-              if (typeof src !== 'string' || src.slice(0, 5) !== 'data:' || src.length <= 300000) return;
+              if (typeof src !== 'string' || src.slice(0, 5) !== 'data:' || src.length <= 200000) return;
               pending++;
               shrinkDataUrl(src, function (out) {
                 if (out && out.length < src.length - 2000) { car.images[ii] = out; any = true; }
                 if (--pending === 0) resolve(any ? list : null);
-              }, { maxDim: 900, target: 230000 });
+              }, { maxDim: 640, target: 110000 });
             });
           });
           if (!pending) resolve(null);
@@ -2614,6 +2670,7 @@
               clearDirty();
               syncBusy = false;
               refreshCloudPill();
+              if (window.cmVisitsRefresh) window.cmVisitsRefresh();
               if (manual) toast('Synced — your changes are live for every visitor.', 'success');
               else toast('✅ Car published live!', 'success');
               if (syncPending) { syncPending = false; queueSync(); }
@@ -2648,6 +2705,90 @@
         if (syncBusy) { syncPending = true; return; }
         syncNow(false);
       }
+
+      /* ---- Live visitor stats --------------------------------------------------
+         Shows how many people have visited the website. The public page
+         records every visit in Supabase (table "visits", created by the
+         setup SQL in README.md). Refreshes after each sync and every 12 s. */
+      var statVisits = document.getElementById('statVisits');
+      var visitsHead = document.getElementById('visitsHead');
+      var visitsList = document.getElementById('visitsList');
+      var visitsHint = document.getElementById('visitsHint');
+      var adminViewEl = document.getElementById('adminView');
+      var lastVisitTotal = -1;
+
+      function visitTime(iso) {
+        var t = Date.parse(iso);
+        if (isNaN(t)) return '';
+        var mins = Math.floor((Date.now() - t) / 60000);
+        if (mins < 2) return 'Just now';
+        if (mins < 60) return mins + ' min ago';
+        var d = new Date(t);
+        var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        if (d.toDateString() === new Date().toDateString()) return 'Today ' + hm;
+        return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + hm;
+      }
+
+      function showVisitsHint(msg) {
+        if (statVisits) statVisits.querySelector('.stat-value').textContent = '\u2014';
+        if (visitsHead) visitsHead.textContent = '';
+        if (visitsList) visitsList.innerHTML = '';
+        if (visitsHint) { visitsHint.textContent = msg; visitsHint.style.display = ''; }
+      }
+
+      function renderVisits(rows, total) {
+        var seen = {}, people = 0, i;
+        for (i = 0; i < rows.length; i++) if (rows[i].vid && !seen[rows[i].vid]) { seen[rows[i].vid] = 1; people++; }
+        if (visitsHint) visitsHint.style.display = 'none';
+        if (statVisits) statVisits.querySelector('.stat-value').textContent = people;
+        if (visitsHead) {
+          visitsHead.textContent = people + (people === 1 ? ' person has' : ' people have') +
+            ' visited \u00b7 ' + total + (total === 1 ? ' visit' : ' visits');
+        }
+        if (visitsList) {
+          var html = '';
+          rows.slice(0, 8).forEach(function (r) {
+            html += '<li class="visit-row"><span class="visit-time">' + esc(visitTime(r.created_at)) + '</span><span>' +
+              esc(r.device || 'Visitor') + (r.source && r.source !== 'direct' ? ' \u00b7 from ' + esc(r.source) : '') + '</span></li>';
+          });
+          visitsList.innerHTML = html || '<li class="visit-row"><span>Visits will appear here as soon as people open your website.</span></li>';
+        }
+        return people;
+      }
+
+      window.cmVisitsRefresh = function () {
+        if (!sbConfigured() || typeof fetch !== 'function') {
+          if (lastVisitTotal === -1) showVisitsHint('Visitor stats appear once the cloud is connected.');
+          return;
+        }
+        if (!sbValidSession()) {
+          if (lastVisitTotal === -1) showVisitsHint('Sign in with the cloud button (top right) to see who is visiting your website.');
+          return;
+        }
+        sbAuthedFetch(SUPABASE_URL + '/rest/v1/visits?select=vid,device,source,created_at&order=created_at.desc&limit=1000',
+          { cache: 'no-cache', headers: { 'Prefer': 'count=exact' } })
+          .then(function (r) {
+            if (!r.ok) {
+              if (r.status === 404) showVisitsHint('Visitor counting is not set up yet \u2014 run the setup SQL from README.md in your Supabase SQL editor (one paste, one Run).');
+              return null;
+            }
+            return r.json().then(function (rows) {
+              var total = rows.length;                   /* exact total from the server, when offered */
+              try {
+                var m = String(r.headers && r.headers.get && r.headers.get('content-range') || '').match(/\/(\d+)$/);
+                if (m) total = parseInt(m[1], 10);
+              } catch (err) {}
+              var people = renderVisits(rows, total);
+              if (lastVisitTotal >= 0 && total > lastVisitTotal && (!adminViewEl || !adminViewEl.hidden)) {
+                toast('\ud83d\udd14 A visitor is on your website \u2014 ' + people + (people === 1 ? ' person has' : ' people have') + ' visited', 'info');
+              }
+              lastVisitTotal = total;
+            });
+          })
+          .catch(function () {});                         /* offline \u2014 the next tick retries */
+      };
+      window.cmVisitsRefresh();
+      setInterval(function () { if (!document.hidden) window.cmVisitsRefresh(); }, 12000);
 
       function openSbModal() {
         if (!sbModal) return;
@@ -2833,7 +2974,7 @@
 
       gateForm.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); if (window.cmCloudCheck) window.cmCloudCheck(); if (window.cmDashboardRefresh) window.cmDashboardRefresh(); }
+        if (gateInput.value === CM_PASSCODE) { closeGate(); showAdmin(); if (window.cmCloudCheck) window.cmCloudCheck(); if (window.cmDashboardRefresh) window.cmDashboardRefresh(); if (window.cmVisitsRefresh) window.cmVisitsRefresh(); }
         else { gateError.hidden = false; gateInput.value = ''; gateInput.focus(); }
       });
       document.getElementById('gateCancel').addEventListener('click', closeGate);
