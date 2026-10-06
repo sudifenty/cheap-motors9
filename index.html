@@ -1105,6 +1105,59 @@
       });
     }
 
+    /* ---- Photos live in Supabase Storage, not in the database ----------
+       Uploaded photos are stored as image files in a public "photos"
+       bucket and served to visitors from the Supabase CDN. The inventory
+       itself stays tiny (a few kilobytes per car), so the website loads
+       instantly and updates appear in real time; each visitor's browser
+       caches every photo separately. The move happens automatically while
+       syncing - a photo that cannot be upload is simply kept as it was and
+       retried on the next save. */
+    function sbUploadImage(carId, idx, dataUrl) {
+      var comma = dataUrl.indexOf(',');
+      var meta = dataUrl.slice(5, comma) || 'image/jpeg';
+      var ext = meta.indexOf('png') !== -1 ? 'png' : 'jpg';
+      var bytes;
+      try {
+        var raw = atob(dataUrl.slice(comma + 1));
+        bytes = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      } catch (err) { return Promise.resolve(null); }
+      var path = 'cars/' + carId + '/' + Date.now() + '-' + idx + '.' + ext;
+      return sbAuthedFetch(SUPABASE_URL + '/storage/v1/object/photos/' + path, {
+        method: 'POST',
+        headers: { 'Content-Type': meta },
+        body: bytes
+      }).then(function (r) {
+        if (!r.ok && r.status !== 200 && r.status !== 201) return null;
+        return SUPABASE_URL + '/storage/v1/object/public/photos/' + path;
+      }).catch(function () { return null; });
+    }
+
+    function sbMigratePhotos(carsArr) {
+      if (!sbConfigured() || !sbValidSession() || typeof fetch !== 'function') return Promise.resolve(false);
+      var anyData = false;
+      carsArr.forEach(function (car) {
+        if (car && Array.isArray(car.images)) car.images.forEach(function (s) {
+          if (typeof s === 'string' && s.slice(0, 5) === 'data:') anyData = true;
+        });
+      });
+      if (!anyData) return Promise.resolve(false);
+      var chain = Promise.resolve(), moved = false;
+      carsArr.forEach(function (car) {          /* one car at a time, its photos together */
+        var jobs = [];
+        (car && car.images || []).forEach(function (src, ii) {
+          if (typeof src === 'string' && src.slice(0, 5) === 'data:') {
+            jobs.push(sbUploadImage(car.id, ii, src).then(function (url) {
+              if (url) { car.images[ii] = url; moved = true; }
+            }));
+          }
+        });
+        if (jobs.length) chain = chain.then(function () { return Promise.all(jobs); });
+      });
+      return chain.then(function () { return moved; });
+    }
+
     /* Push the inventory to Supabase. Only changed/new cars are uploaded and
        cars removed here are deleted there, so a normal save is one small
        request even with a big inventory. */
@@ -1381,6 +1434,9 @@
         "createdAt": 1791109005354
       }
     ];
+      /* When this baked-in stock was taken - a cloud cache older than this
+         is stale and must not paint over the baked stock. */
+      var CM_SNAPSHOT_AT = Date.parse('2026-10-06T11:47:00Z');
 
     (function () {
       'use strict';
@@ -1745,15 +1801,17 @@
           if (!Array.isArray(arr)) return null;
           arr = arr.filter(function (c) { return c && typeof c === 'object'; });
           if (!arr.length) return null;
-          var cur = '';
+          var cur = '', at = 0;
           try { cur = storage.getItem(CUR_CACHE_KEY) || ''; } catch (err) {}
-          return { cars: arr, cur: cur };
+          try { at = parseInt(storage.getItem(CACHE_KEY + 'At') || '0', 10) || 0; } catch (err) {}
+          return { cars: arr, cur: cur, at: at };
         } catch (err) { return null; }
       }
       function writeCloudCache(arr, cur) {
         try {                                  /* best effort; a full device is fine */
           storage.setItem(CACHE_KEY, JSON.stringify(arr || []));
           if (cur) storage.setItem(CUR_CACHE_KEY, String(cur));
+          try { storage.setItem(CACHE_KEY + 'At', String(Date.now())); } catch (err2) {}
         } catch (err) {}
       }
 
@@ -1806,7 +1864,9 @@
       }
 
       if (sbConfigured() && typeof fetch === 'function') {
-        var preCloud = readCloudCache() || peekRealLocalCars() ||
+        var cachedCloud = readCloudCache();
+        if (cachedCloud && cachedCloud.at < CM_SNAPSHOT_AT) cachedCloud = null;  /* stale: baked stock is newer */
+        var preCloud = cachedCloud || peekRealLocalCars() ||
           { cars: JSON.parse(JSON.stringify(DEFAULT_CARS)), cur: '' };   /* baked-in real stock */
         remoteCars = preCloud.cars;
         if (preCloud.cur) remoteCur = preCloud.cur;
@@ -2783,7 +2843,14 @@
               render();
               if (window.cmPushSiteCars) window.cmPushSiteCars(slimmed, currentCurrency().code);
             }
-            return sbSyncInventory(cars, currentCurrency().code, dash, lastSyncedMap);
+            return sbMigratePhotos(cars).then(function (moved) {
+              if (moved) {                           /* keep the light copies on this device too */
+                try { storage.setItem(STORE_KEY, JSON.stringify(cars)); } catch (err) {}
+                render();
+                if (window.cmPushSiteCars) window.cmPushSiteCars(cars, currentCurrency().code);
+              }
+              return sbSyncInventory(cars, currentCurrency().code, dash, lastSyncedMap);
+            });
           })
             .then(function (prevMap) {
               lastSyncedMap = prevMap;
