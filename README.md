@@ -20,10 +20,13 @@ browser (≤760px JPEG, about 80–160 KB each, up to 6 per car).
 - **Photos are compressed before they are saved** (≤760px JPEG, roughly
   80–160 KB each), so cars stay small and the website stays fast even on
   mobile data.
-- **Cloud photos are slimmed automatically.** The first time you save after
-  updating this file, every photo already in the cloud is re-compressed
-  (≤640px, ~110 KB) and re-uploaded — one time, a few seconds — so even a
-  big inventory loads quickly for visitors on mobile data.
+- **Photos live in Supabase Storage, not in the database.** The first time
+  you save after updating this file, every photo moves to the `photos`
+  bucket automatically (one time — the pill shows "Syncing…" while it
+  works). After that the inventory itself is tiny (a few KB per car), so
+  the website loads **instantly** and updates appear in **real time**;
+  photos are served from the Supabase CDN and cached by every visitor's
+  browser individually.
 - **The cloud is the real home of your inventory.** The browser's own
   storage (about 5 MB) is only an offline copy. If it ever fills up, cars
   keep saving and syncing normally — the dashboard just tells you the
@@ -154,6 +157,23 @@ create policy "owner manages settings" on public.app_settings for all to authent
 -- visitor came from.
 create policy "anyone can record a visit" on public.visits for insert to anon, authenticated with check (true);
 create policy "owner reads visits"        on public.visits for select to authenticated using (true);
+
+-- Fast photos: uploaded photos are stored as files in Supabase Storage
+-- and served to visitors from the CDN. The inventory itself stays tiny, so
+-- the website loads instantly. (The dashboard moves existing photos there
+-- automatically the first time you save after this SQL.)
+insert into storage.buckets (id, name, public)
+values ('photos', 'photos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "everyone reads photos"   on storage.objects;
+drop policy if exists "owner uploads photos"    on storage.objects;
+drop policy if exists "owner overwrites photos" on storage.objects;
+drop policy if exists "owner deletes photos"    on storage.objects;
+create policy "everyone reads photos"   on storage.objects for select using (bucket_id = 'photos');
+create policy "owner uploads photos"    on storage.objects for insert to authenticated with check (bucket_id = 'photos');
+create policy "owner overwrites photos" on storage.objects for update to authenticated using (bucket_id = 'photos') with check (bucket_id = 'photos');
+create policy "owner deletes photos"    on storage.objects for delete to authenticated using (bucket_id = 'photos');
 
 -- Live updates: visitors' open tabs refresh themselves when you publish a
 -- change (no reload needed anywhere).
