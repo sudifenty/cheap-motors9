@@ -215,6 +215,9 @@
     .skel-cta{height:2.4rem;border-radius:.75rem;background:#232323;margin-top:1.1rem;animation:skelPulse 1.3s ease-in-out infinite}
     @keyframes skelPulse{0%,100%{opacity:.45}50%{opacity:.9}}
     .img-badge{position:absolute;right:.55rem;bottom:.55rem;background:rgba(0,0,0,.75);color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .45rem;border-radius:.45rem}
+    .photo-sold{filter:grayscale(.8);opacity:.88}
+    .sold-badge{position:absolute;top:.6rem;left:.6rem;z-index:2;background:#dc2626;color:#fff;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:.28rem .55rem;border-radius:.5rem;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+    .sold-note{margin:0 0 .7rem;font-size:.8rem;font-weight:600;color:#f87171}
     .loc-chip{display:inline-flex;align-items:center;gap:.45rem;border:1px solid #333;border-radius:.75rem;background:#181818;color:#ccc;padding:.65rem 1.1rem;font-size:.85rem;font-weight:700;cursor:pointer;text-decoration:none;transition:border-color .15s ease,color .15s ease}
     .loc-chip:hover{border-color:rgba(255,140,66,.6);color:#fff}
     .footer-contact .loc-link{color:#999;font-weight:500}
@@ -1448,7 +1451,8 @@
          • loadCars() reads localStorage, applies the live search from
            #search and renders the matching cards into #cars
          • #count shows how many cars match ("Showing X cars available")
-         • Sold cars (status "sold" or sold: true) are always hidden
+         • Sold cars (status "sold" or sold: true) stay listed, with a
+           bold red SOLD badge and a greyed-out photo
          ================================================================ */
 
       var STORE_KEY = 'cheapMotors';
@@ -1604,6 +1608,7 @@
 
       /* ---- Card template ------------------------------------------------ */
       function carCard(car, index, animate) {
+        var sold = isSold(car);
         var cls = 'card-hover group overflow-hidden rounded-2xl border border-[#262626] bg-[#1a1a1a] p-5 transition duration-300';
         var style = '';
         if (animate) {                       // entrance animation on first paint only
@@ -1614,13 +1619,15 @@
         <article class="${cls}"${style}>
           <div class="relative">
             <img src="${esc(coverImage(car))}" alt="${esc(car.name)}" loading="lazy" data-action="photos" data-id="${esc(car.id)}"
-                 class="card-photo h-40 w-full rounded-xl object-cover transition duration-500 group-hover:scale-105">
+                 class="card-photo h-40 w-full rounded-xl object-cover transition duration-500 group-hover:scale-105${sold ? ' photo-sold' : ''}">
+            ${sold ? '<span class="sold-badge">Sold</span>' : ''}
             ${carImages(car).length > 1 ? '<span class="img-badge">' + carImages(car).length + ' photos</span>' : ''}
           </div>
           <div class="mt-4">
             <h3 class="text-lg font-bold text-white">${esc(car.name)}</h3>
             <p class="mt-1 text-sm text-[#999]">${fmtMiles(car.miles)}</p>
             <div data-desc="${esc(car.id)}" class="hidden mt-3">
+              ${sold ? '<p class="sold-note">This car has been sold \u2014 call or WhatsApp us and we will find you a similar one.</p>' : ''}
               ${car.description ? `<p class="text-sm leading-relaxed text-[#888]">${esc(car.description)}</p>` : ''}
               <div class="card-contact">
                 <a href="${PHONE_TEL}" class="phone-btn">
@@ -1676,15 +1683,17 @@
         var query = rawQuery.toLowerCase();
 
         var visible = (remoteCars || readCars()).filter(function (c) {
-          return !isSold(c) && String(c.name || '').toLowerCase().includes(query);
+          return String(c.name || '').toLowerCase().includes(query);   /* sold cars stay listed */
         });
 
         carById = {};                               // lookup for the photo viewer
         visible.forEach(function (c) { carById[String(c.id)] = c; });
 
         if (countEl) {
+          var soldShown = visible.filter(isSold).length;
           countEl.innerHTML = 'Showing <span class="font-bold text-white">' + visible.length +
-            '</span> car' + (visible.length === 1 ? '' : 's') + ' available';
+            '</span> car' + (visible.length === 1 ? '' : 's') +
+            (soldShown ? ' <span class="text-[#f87171]">(' + soldShown + ' sold)</span>' : '');
         }
 
         grid.innerHTML = visible.length
