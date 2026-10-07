@@ -7,7 +7,7 @@ their next refresh. No publish button, no tokens, nothing to remember.
 
 | File | What it is |
 |---|---|
-| `index.html` | The whole website AND the owner dashboard in one page. Customers see the car grid, photo galleries, search, contact buttons and showroom location. The **Owner Login** button (top right) opens the dashboard on the same page behind a passcode |
+| `index.html` | The whole website AND the owner dashboard in one page. Customers see the car grid, photo galleries, search, contact buttons and showroom location. Cars you mark **Sold** stay listed with a bold red **SOLD** badge (photo greyed out) instead of vanishing The **Owner Login** button (top right) opens the dashboard on the same page behind a passcode |
 | `README.md` | This guide |
 
 ## Run it on your computer
@@ -204,7 +204,11 @@ your owner account (step 4) can change the inventory — visitors just read it.
    itself** the first time you enter the dashboard — sign in once there and
    every save syncs from then on.
 3. Updates are instant everywhere: your website view changes the moment you save, and any open tab — yours or a visitor's — updates itself (instantly once the Realtime lines in the setup SQL have run; otherwise within about half a minute). A “✅ Car published live!” toast confirms every successful sync.
-4. **Live visitor stats** — the dashboard counts your visitors for you: a
+4. **Mark a car Sold** (the red button on its row) — it stays on the
+   website with a bold red **SOLD** badge and a greyed-out photo, with the
+   price still showing. Customers can see what has sold; it also stays in
+   search. Mark it Available again any time.
+5. **Live visitor stats** — the dashboard counts your visitors for you: a
    “Website Visits” stat box, a feed of recent visits (“Just now · Android
    phone · from facebook.com”) and a 🔔 toast while you work when someone
    opens your website. It needs the `visits` lines in the setup SQL above
